@@ -3,15 +3,17 @@ extern crate serde_bencode;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_bytes;
+extern crate sha1;
 
 use serde_bencode::de;
+use serde_bencode::ser;
 use serde_bytes::ByteBuf;
 use std::io::{self, Read};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Node(String, i64);
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct File {
     path: Vec<String>,
     length: i64,
@@ -19,7 +21,7 @@ struct File {
     md5sum: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct BencodeInfo {
     name: String,
     pieces: ByteBuf,
@@ -40,7 +42,7 @@ struct BencodeInfo {
     root_hash: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct BencodeTorrent {
     info: BencodeInfo,
     #[serde(default)]
@@ -68,16 +70,24 @@ struct Torrent {
     announce: String,
     name: String,
     length: i64,
-    // info_hash: [u8; 20],
+    info_hash: [u8; 20],
     // piece_hashes: Vec<[u8; 20]>,
     // piece_length: i32,
 }
 
 fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
+    let info_bencoded = ser::to_bytes(&bencode_torrent.info).unwrap();
+    let mut info_hasher = sha1::Sha1::new();
+    info_hasher.update(&info_bencoded);
+    let mut info_hashed: [u8; 20] = Default::default();
+    let info_hashed_string = info_hasher.digest().to_string();
+    let info_hashed_slice = info_hashed_string.as_bytes();
+    info_hashed.copy_from_slice(&info_hashed_slice[0..20]);
     let torrent = Torrent {
         announce: bencode_torrent.announce.as_ref().unwrap().to_string(),
         name: bencode_torrent.info.name.clone(),
         length: bencode_torrent.info.length.unwrap(),
+        info_hash: info_hashed,
     };
     torrent
 }
@@ -86,6 +96,7 @@ fn render_torrent(torrent: &Torrent) {
     println!("announce: {}", torrent.announce);
     println!("name: {}", torrent.name);
     println!("length: {}", torrent.length);
+    println!("info_hash: {:?}", torrent.info_hash);
 }
 
 fn render_bencode_torrent(torrent: &BencodeTorrent) {
