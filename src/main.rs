@@ -71,23 +71,29 @@ struct Torrent {
     name: String,
     length: i64,
     info_hash: [u8; 20],
+    // piece_length: i64,
     // piece_hashes: Vec<[u8; 20]>,
-    // piece_length: i32,
+}
+
+impl BencodeInfo {
+    fn calculate_info_hash(&self) -> [u8; 20] {
+        let info_bencoded = ser::to_bytes(&self).unwrap();
+        let mut info_hasher = sha1::Sha1::new();
+        info_hasher.update(&info_bencoded);
+        let mut info_hashed: [u8; 20] = Default::default();
+        let info_hashed_string = info_hasher.digest().to_string();
+        let info_hashed_slice = info_hashed_string.as_bytes();
+        info_hashed.copy_from_slice(&info_hashed_slice[0..20]);
+        info_hashed
+    }
 }
 
 fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
-    let info_bencoded = ser::to_bytes(&bencode_torrent.info).unwrap();
-    let mut info_hasher = sha1::Sha1::new();
-    info_hasher.update(&info_bencoded);
-    let mut info_hashed: [u8; 20] = Default::default();
-    let info_hashed_string = info_hasher.digest().to_string();
-    let info_hashed_slice = info_hashed_string.as_bytes();
-    info_hashed.copy_from_slice(&info_hashed_slice[0..20]);
     let torrent = Torrent {
         announce: bencode_torrent.announce.as_ref().unwrap().to_string(),
         name: bencode_torrent.info.name.clone(),
         length: bencode_torrent.info.length.unwrap(),
-        info_hash: info_hashed,
+        info_hash: bencode_torrent.info.calculate_info_hash(),
     };
     torrent
 }
