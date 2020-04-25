@@ -20,7 +20,7 @@ struct File {
 }
 
 #[derive(Debug, Deserialize)]
-struct Info {
+struct BencodeInfo {
     name: String,
     pieces: ByteBuf,
     #[serde(rename = "piece length")]
@@ -41,8 +41,8 @@ struct Info {
 }
 
 #[derive(Debug, Deserialize)]
-struct Torrent {
-    info: Info,
+struct BencodeTorrent {
+    info: BencodeInfo,
     #[serde(default)]
     announce: Option<String>,
     #[serde(default)]
@@ -64,7 +64,31 @@ struct Torrent {
     created_by: Option<String>,
 }
 
+struct Torrent {
+    announce: String,
+    name: String,
+    length: i64,
+    // info_hash: [u8; 20],
+    // piece_hashes: Vec<[u8; 20]>,
+    // piece_length: i32,
+}
+
+fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
+    let torrent = Torrent {
+        announce: bencode_torrent.announce.as_ref().unwrap().to_string(),
+        name: bencode_torrent.info.name.clone(),
+        length: bencode_torrent.info.length.unwrap(),
+    };
+    torrent
+}
+
 fn render_torrent(torrent: &Torrent) {
+    println!("announce: {}", torrent.announce);
+    println!("name: {}", torrent.name);
+    println!("length: {}", torrent.length);
+}
+
+fn render_bencode_torrent(torrent: &BencodeTorrent) {
     println!("name:\t\t{}", torrent.info.name);
     println!("announce:\t{:?}", torrent.announce);
     println!("nodes:\t\t{:?}", torrent.nodes);
@@ -96,11 +120,20 @@ fn main() {
     let stdin = io::stdin();
     let mut buffer = Vec::new();
     let mut handle = stdin.lock();
+    let bencode_torrent;
     match handle.read_to_end(&mut buffer) {
-        Ok(_) => match de::from_bytes::<Torrent>(&buffer) {
-            Ok(t) => render_torrent(&t),
-            Err(e) => println!("ERROR: {:?}", e),
+        Ok(_) => match de::from_bytes::<BencodeTorrent>(&buffer) {
+            Ok(t) => {
+                bencode_torrent = t;
+                render_bencode_torrent(&bencode_torrent);
+            }
+            Err(e) => panic!("ERROR: {:?}", e),
         },
-        Err(e) => println!("ERROR: {:?}", e),
+        Err(e) => panic!("ERROR: {:?}", e),
     }
+
+    let torrent = new_torrent(&bencode_torrent);
+
+    println!("\nTorrent struct:");
+    render_torrent(&torrent);
 }
