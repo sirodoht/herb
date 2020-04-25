@@ -71,7 +71,7 @@ struct Torrent {
     name: String,
     length: i64,
     info_hash: [u8; 20],
-    // piece_length: i64,
+    piece_length: i64,
     // piece_hashes: Vec<[u8; 20]>,
 }
 
@@ -94,6 +94,7 @@ fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
         name: bencode_torrent.info.name.clone(),
         length: bencode_torrent.info.length.unwrap(),
         info_hash: bencode_torrent.info.calculate_info_hash(),
+        piece_length: bencode_torrent.info.piece_length,
     };
     torrent
 }
