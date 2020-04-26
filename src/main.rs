@@ -72,7 +72,7 @@ struct Torrent {
     length: i64,
     info_hash: [u8; 20],
     piece_length: i64,
-    // piece_hashes: Vec<[u8; 20]>,
+    piece_hashes: Vec<[u8; 20]>,
 }
 
 impl BencodeInfo {
@@ -86,6 +86,26 @@ impl BencodeInfo {
         info_hashed.copy_from_slice(&info_hashed_slice[0..20]);
         info_hashed
     }
+
+    fn split_piece_hashes(&self) -> Vec<[u8; 20]> {
+        let mut hash_list: Vec<[u8; 20]> = Vec::new();
+        let mut hash: [u8; 20] = Default::default();
+        let mut current_index: usize = 0;
+        for piece in self.pieces.iter() {
+            // add piece in hash unless hash is full
+            if current_index < 20 {
+                hash[current_index] = *piece;
+                current_index += 1;
+            } else {
+                // if hash full, push hash into hash_list
+                // and consider hash empty (by reverting index to 0)
+                println!("{:?}", hash);
+                hash_list.push(hash);
+                current_index = 0;
+            }
+        }
+        hash_list
+    }
 }
 
 fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
@@ -95,6 +115,7 @@ fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
         length: bencode_torrent.info.length.unwrap(),
         info_hash: bencode_torrent.info.calculate_info_hash(),
         piece_length: bencode_torrent.info.piece_length,
+        piece_hashes: bencode_torrent.info.split_piece_hashes(),
     };
     torrent
 }
@@ -104,6 +125,8 @@ fn render_torrent(torrent: &Torrent) {
     println!("name: {}", torrent.name);
     println!("length: {}", torrent.length);
     println!("info_hash: {:?}", torrent.info_hash);
+    println!("piece_length: {}", torrent.piece_length);
+    // println!("piece_hashes: {:?}", torrent.piece_hashes);
 }
 
 fn render_bencode_torrent(torrent: &BencodeTorrent) {
