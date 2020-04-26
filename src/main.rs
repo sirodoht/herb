@@ -75,6 +75,11 @@ struct Torrent {
     piece_hashes: Vec<[u8; 20]>,
 }
 
+#[derive(Debug, Clone)]
+enum InvalidTorrentError {
+    WrongNumberOfPieces,
+}
+
 impl BencodeInfo {
     fn calculate_info_hash(&self) -> [u8; 20] {
         let info_bencoded = ser::to_bytes(&self).unwrap();
@@ -87,7 +92,12 @@ impl BencodeInfo {
         info_hashed
     }
 
-    fn split_piece_hashes(&self) -> Vec<[u8; 20]> {
+    fn split_piece_hashes(&self) -> Result<Vec<[u8; 20]>, InvalidTorrentError> {
+        // handle info.pieces length not being divided by 20
+        if self.pieces.len() % 20 != 0 {
+            return Err(InvalidTorrentError::WrongNumberOfPieces);
+        }
+
         let mut hash_list: Vec<[u8; 20]> = Vec::new();
         let mut hash: [u8; 20] = Default::default();
         let mut current_index: usize = 0;
@@ -99,12 +109,11 @@ impl BencodeInfo {
             } else {
                 // if hash full, push hash into hash_list
                 // and consider hash empty (by reverting index to 0)
-                println!("{:?}", hash);
                 hash_list.push(hash);
                 current_index = 0;
             }
         }
-        hash_list
+        Ok(hash_list)
     }
 }
 
@@ -115,7 +124,7 @@ fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
         length: bencode_torrent.info.length.unwrap(),
         info_hash: bencode_torrent.info.calculate_info_hash(),
         piece_length: bencode_torrent.info.piece_length,
-        piece_hashes: bencode_torrent.info.split_piece_hashes(),
+        piece_hashes: bencode_torrent.info.split_piece_hashes().unwrap(),
     };
     torrent
 }
