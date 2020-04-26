@@ -2,13 +2,16 @@ extern crate serde;
 extern crate serde_bencode;
 #[macro_use]
 extern crate serde_derive;
+extern crate base64;
 extern crate serde_bytes;
 extern crate sha1;
+extern crate url;
 
 use serde_bencode::de;
 use serde_bencode::ser;
 use serde_bytes::ByteBuf;
 use std::io::{self, Read};
+use url::{form_urlencoded, ParseError, Url};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Node(String, i64);
@@ -117,6 +120,24 @@ impl BencodeInfo {
     }
 }
 
+impl Torrent {
+    fn build_tracker_url(&self) -> Result<String, ParseError> {
+        let querystring = format!(
+            "/?info_hash={info_hash}&peer_id={peer_id}&port={port}&uploaded={uploaded}&downloaded={downloaded}&compact={compact}&left={left}",
+            info_hash=base64::encode(self.info_hash),
+            peer_id="-TR2940-k8hj0wgej6c1",
+            port="6881",
+            uploaded="0",
+            downloaded="0",
+            compact="1",
+            left=self.length,
+        );
+        let mut final_url = self.announce.to_owned();
+        final_url.push_str(&querystring);
+        Ok(final_url)
+    }
+}
+
 fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
     let torrent = Torrent {
         announce: bencode_torrent.announce.as_ref().unwrap().to_string(),
@@ -186,4 +207,7 @@ fn main() {
 
     println!("\nTorrent struct:");
     render_torrent(&torrent);
+
+    let url = torrent.build_tracker_url().unwrap();
+    println!("\nURL: {}", url);
 }
