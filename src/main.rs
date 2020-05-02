@@ -2,7 +2,6 @@ extern crate serde;
 extern crate serde_bencode;
 #[macro_use]
 extern crate serde_derive;
-extern crate base64;
 extern crate serde_bytes;
 extern crate sha1;
 extern crate url;
@@ -10,8 +9,9 @@ extern crate url;
 use serde_bencode::de;
 use serde_bencode::ser;
 use serde_bytes::ByteBuf;
+use sha1::{Digest, Sha1};
 use std::io::{self, Read};
-use url::{form_urlencoded, ParseError, Url};
+use url::{form_urlencoded, ParseError};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Node(String, i64);
@@ -86,13 +86,12 @@ enum InvalidTorrentError {
 impl BencodeInfo {
     fn calculate_info_hash(&self) -> [u8; 20] {
         let info_bencoded = ser::to_bytes(&self).unwrap();
-        let mut info_hasher = sha1::Sha1::new();
-        info_hasher.update(&info_bencoded);
-        let mut info_hashed: [u8; 20] = Default::default();
-        let info_hashed_string = info_hasher.digest().to_string();
-        let info_hashed_slice = info_hashed_string.as_bytes();
-        info_hashed.copy_from_slice(&info_hashed_slice[0..20]);
-        info_hashed
+        let mut hasher = Sha1::new();
+        hasher.input(info_bencoded);
+        let sum_hex = hasher.result();
+        let mut sum_bytes: [u8; 20] = Default::default();
+        sum_bytes.copy_from_slice(sum_hex.as_slice());
+        sum_bytes
     }
 
     fn split_piece_hashes(&self) -> Result<Vec<[u8; 20]>, InvalidTorrentError> {
@@ -122,15 +121,23 @@ impl BencodeInfo {
 
 impl Torrent {
     fn build_tracker_url(&self) -> Result<String, ParseError> {
-        let querystring = format!(
-            "/?info_hash={info_hash}&peer_id={peer_id}&port={port}&uploaded={uploaded}&downloaded={downloaded}&compact={compact}&left={left}",
-            info_hash=base64::encode(self.info_hash),
-            peer_id="-TR2940-k8hj0wgej6c1",
+        let infohash_urlencoded: String =
+            form_urlencoded::byte_serialize(&self.info_hash).collect();
+
+        let peer_id = "-TR2940-k8hj0wgej6c1";
+        let peer_id_urlencoded: String =
+            form_urlencoded::byte_serialize(peer_id.as_bytes()).collect();
+
+        let querystring: String;
+        querystring = format!(
+            "?info_hash={info_hash}&peer_id={peer_id}&port={port}&uploaded={uploaded}&downloaded={downloaded}&compact={compact}&left={left}",
+            info_hash=infohash_urlencoded,
+            peer_id=peer_id_urlencoded,
             port="6881",
             uploaded="0",
             downloaded="0",
-            compact="1",
             left=self.length,
+            compact="1",
         );
         let mut final_url = self.announce.to_owned();
         final_url.push_str(&querystring);
