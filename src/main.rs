@@ -181,8 +181,7 @@ impl Torrent {
         let peer_id_urlencoded: String =
             form_urlencoded::byte_serialize(peer_id.as_bytes()).collect();
 
-        let querystring: String;
-        querystring = format!(
+        let querystring = format!(
             "?info_hash={info_hash}&peer_id={peer_id}&port={port}&uploaded={uploaded}&downloaded={downloaded}&compact={compact}&left={left}",
             info_hash=infohash_urlencoded,
             peer_id=peer_id_urlencoded,
