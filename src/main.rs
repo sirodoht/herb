@@ -270,9 +270,11 @@ fn main() {
     let url = torrent.build_tracker_url().unwrap();
     println!("\nURL: {}", url);
 
+    // get tracker response
     let mut res = reqwest::blocking::get(&url).unwrap();
     println!("{:#?}", res);
 
+    // extract response body into resp_buffer
     let mut resp_buffer = Vec::new();
     let copy_result = res.copy_to(&mut resp_buffer);
     match copy_result {
@@ -280,6 +282,7 @@ fn main() {
         Err(e) => panic!(e),
     }
 
+    // deserialize tracker response into bencode struct
     let bencode_tracker_resp;
     match de::from_bytes::<BencodeTrackerResp>(&resp_buffer) {
         Ok(t) => {
