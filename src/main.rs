@@ -69,6 +69,14 @@ struct BencodeTorrent {
     created_by: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct BencodeTrackerResp {
+    #[serde(default)]
+    interval: i64,
+    #[serde(default)]
+    peers: ByteBuf,
+}
+
 struct Torrent {
     announce: String,
     name: String,
@@ -217,4 +225,24 @@ fn main() {
 
     let url = torrent.build_tracker_url().unwrap();
     println!("\nURL: {}", url);
+
+    let mut res = reqwest::blocking::get(&url).unwrap();
+    println!("{:#?}", res);
+
+    let mut resp_buffer = Vec::new();
+    let copy_result = res.copy_to(&mut resp_buffer);
+    match copy_result {
+        Ok(_) => (),
+        Err(e) => panic!(e),
+    }
+
+    let bencode_tracker_resp;
+    match de::from_bytes::<BencodeTrackerResp>(&resp_buffer) {
+        Ok(t) => {
+            bencode_tracker_resp = t;
+            println!("{:?}", bencode_tracker_resp);
+            println!();
+        }
+        Err(e) => panic!("ERROR: {:?}", e),
+    }
 }
