@@ -111,14 +111,18 @@ impl BencodeTrackerResp {
         for i in 0..num_peers {
             let offset = i * peer_size;
 
-            let ip_bin = &self.peers[offset..offset + 4];
-            let port: [u8; 2] = [self.peers[offset + 4], self.peers[offset + 5]];
-
-            let frame_size = u16::from_be_bytes(port);
+            let ip_slice = &self.peers[offset..offset + 4];
+            let port_arr: [u8; 2] = [self.peers[offset + 4], self.peers[offset + 5]];
+            let port = u16::from_be_bytes(port_arr);
 
             let newpeer = Peer {
-                ip: IpAddr::V4(Ipv4Addr::new(ip_bin[0], ip_bin[1], ip_bin[2], ip_bin[3])),
-                port: frame_size,
+                ip: IpAddr::V4(Ipv4Addr::new(
+                    ip_slice[0],
+                    ip_slice[1],
+                    ip_slice[2],
+                    ip_slice[3],
+                )),
+                port: port,
             };
             final_peers.push(newpeer);
         }
