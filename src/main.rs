@@ -122,7 +122,7 @@ impl BencodeTrackerResp {
                     ip_slice[2],
                     ip_slice[3],
                 )),
-                port: port,
+                port,
             };
             final_peers.push(newpeer);
         }
