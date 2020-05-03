@@ -108,7 +108,7 @@ impl BencodeTrackerResp {
             panic!("Received malformed peers");
         }
 
-        for i in (0..num_peers) {
+        for i in 0..num_peers {
             let offset = i * peer_size;
 
             let ip_bin = &self.peers[offset..offset + 4];
