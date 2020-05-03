@@ -98,14 +98,19 @@ enum InvalidTorrentError {
     WrongNumberOfPieces,
 }
 
+#[derive(Debug, Clone)]
+enum TrackerError {
+    InvalidPeerResponse,
+}
+
 impl BencodeTrackerResp {
-    fn get_peers(&self) -> Vec<Peer> {
+    fn get_peers(&self) -> Result<Vec<Peer>, TrackerError> {
         let mut final_peers: Vec<Peer> = vec![];
 
         let peer_size = 6; // 4 for IP, 2 for port
         let num_peers = self.peers.len() / peer_size;
         if self.peers.len() % peer_size != 0 {
-            panic!("Received malformed peers");
+            return Err(TrackerError::InvalidPeerResponse);
         }
 
         for i in 0..num_peers {
@@ -127,7 +132,7 @@ impl BencodeTrackerResp {
             final_peers.push(newpeer);
         }
 
-        final_peers
+        Ok(final_peers)
     }
 }
 
@@ -286,6 +291,6 @@ fn main() {
         Err(e) => panic!("ERROR: {:?}", e),
     }
 
-    let peers = bencode_tracker_resp.get_peers();
+    let peers = bencode_tracker_resp.get_peers().unwrap();
     println!("{:?}", peers);
 }
