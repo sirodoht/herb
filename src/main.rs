@@ -11,6 +11,7 @@ use serde_bencode::ser;
 use serde_bytes::ByteBuf;
 use sha1::{Digest, Sha1};
 use std::io::{self, Read};
+use std::net::{IpAddr, Ipv4Addr};
 use url::{form_urlencoded, ParseError};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,9 +87,44 @@ struct Torrent {
     piece_hashes: Vec<[u8; 20]>,
 }
 
+#[derive(Debug)]
+struct Peer {
+    ip: IpAddr,
+    port: u16,
+}
+
 #[derive(Debug, Clone)]
 enum InvalidTorrentError {
     WrongNumberOfPieces,
+}
+
+impl BencodeTrackerResp {
+    fn get_peers(&self) -> Vec<Peer> {
+        let mut final_peers: Vec<Peer> = vec![];
+
+        let peer_size = 6; // 4 for IP, 2 for port
+        let num_peers = self.peers.len() / peer_size;
+        if self.peers.len() % peer_size != 0 {
+            panic!("Received malformed peers");
+        }
+
+        for i in (0..num_peers) {
+            let offset = i * peer_size;
+
+            let ip_bin = &self.peers[offset..offset + 4];
+            let port: [u8; 2] = [self.peers[offset + 4], self.peers[offset + 5]];
+
+            let frame_size = u16::from_be_bytes(port);
+
+            let newpeer = Peer {
+                ip: IpAddr::V4(Ipv4Addr::new(ip_bin[0], ip_bin[1], ip_bin[2], ip_bin[3])),
+                port: frame_size,
+            };
+            final_peers.push(newpeer);
+        }
+
+        final_peers
+    }
 }
 
 impl BencodeInfo {
@@ -245,4 +281,7 @@ fn main() {
         }
         Err(e) => panic!("ERROR: {:?}", e),
     }
+
+    let peers = bencode_tracker_resp.get_peers();
+    println!("{:?}", peers);
 }
