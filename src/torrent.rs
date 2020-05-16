@@ -184,6 +184,15 @@ impl Torrent {
         final_url.push_str(&querystring);
         Ok(final_url)
     }
+
+    pub fn render_torrent(&self) {
+        println!("announce: {}", self.announce);
+        println!("name: {}", self.name);
+        println!("length: {}", self.length);
+        println!("info_hash: {:?}", self.info_hash);
+        println!("piece_length: {}", self.piece_length);
+        // println!("piece_hashes: {:?}", self.piece_hashes);
+    }
 }
 
 pub fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
@@ -195,15 +204,6 @@ pub fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
         piece_length: bencode_torrent.info.piece_length,
         piece_hashes: bencode_torrent.info.split_piece_hashes().unwrap(),
     }
-}
-
-pub fn render_torrent(torrent: &Torrent) {
-    println!("announce: {}", torrent.announce);
-    println!("name: {}", torrent.name);
-    println!("length: {}", torrent.length);
-    println!("info_hash: {:?}", torrent.info_hash);
-    println!("piece_length: {}", torrent.piece_length);
-    // println!("piece_hashes: {:?}", torrent.piece_hashes);
 }
 
 pub fn render_bencode_torrent(torrent: &BencodeTorrent) {

@@ -31,12 +31,12 @@ fn main() {
         Err(e) => panic!("ERROR: {:?}", e),
     }
 
-    let torrent = torrent::new_torrent(&bencode_torrent);
+    let our_torrent = torrent::new_torrent(&bencode_torrent);
 
     println!("\nTorrent struct:");
-    torrent::render_torrent(&torrent);
+    our_torrent.render_torrent();
 
-    let url = torrent.build_tracker_url().unwrap();
+    let url = our_torrent.build_tracker_url().unwrap();
     println!("\nURL: {}", url);
 
     // get tracker response
