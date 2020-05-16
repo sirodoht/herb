@@ -85,21 +85,28 @@ fn main() {
                     .expect("could not fit peer id into 20 bytes")
             }
 
+            println!("crate::PEER_ID.as_bytes(): {:?}", crate::PEER_ID.as_bytes());
             let peer_id_transformed: &[u8] = crate::PEER_ID.as_bytes();
+            println!("peer_id_transformed: {:?}", peer_id_transformed);
+            println!(
+                "*conv_to_20(peer_id_transformed): {:?}",
+                *conv_to_20(peer_id_transformed)
+            );
             let handshake =
                 handshake::new_handshake(our_torrent.info_hash, *conv_to_20(peer_id_transformed));
+            println!("handshake: {:?}", handshake);
 
-            let handshake_bencoded = handshake.serialize();
+            let handshake_serialized = handshake.serialize();
+            println!("handshake_serialized: {:?}", handshake_serialized);
             stream
                 .set_write_timeout(Some(Duration::new(30, 0)))
                 .expect("cannot set write timeout, lol");
 
             stream
-                .write(&handshake_bencoded)
+                .write(&handshake_serialized)
                 .expect("handshake response error");
             println!("sent handshake");
 
-            // let mut data = [0 as u8; 6]; // using 6 byte buffer
             let mut data: Vec<u8> = Default::default();
             match stream.read_to_end(&mut data) {
                 Ok(_) => {
