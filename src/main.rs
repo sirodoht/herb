@@ -75,7 +75,7 @@ fn main() {
         peers[0].ip, peers[0].port
     );
     // start a tcp connection with peers
-    match TcpStream::connect_timeout(&addr, Duration::new(30, 0)) {
+    match TcpStream::connect_timeout(&addr, Duration::new(3, 0)) {
         Ok(mut stream) => {
             println!("Successfully connected to peer");
 
@@ -99,7 +99,7 @@ fn main() {
             let handshake_serialized = handshake.serialize();
             println!("handshake_serialized: {:?}", handshake_serialized);
             stream
-                .set_write_timeout(Some(Duration::new(30, 0)))
+                .set_write_timeout(Some(Duration::new(5, 0)))
                 .expect("cannot set write timeout, lol");
 
             stream
