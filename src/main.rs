@@ -70,8 +70,12 @@ fn main() {
 
     // dial peer tcp
     let addr = SocketAddr::new(peers[0].ip, peers[0].port);
+    println!(
+        "connecting to peer with IP: {}:{}",
+        peers[0].ip, peers[0].port
+    );
     // start a tcp connection with peers
-    match TcpStream::connect_timeout(&addr, Duration::new(3, 0)) {
+    match TcpStream::connect_timeout(&addr, Duration::new(30, 0)) {
         Ok(mut stream) => {
             println!("Successfully connected to peer");
 
@@ -86,23 +90,27 @@ fn main() {
                 handshake::new_handshake(our_torrent.info_hash, *conv_to_20(peer_id_transformed));
 
             let handshake_bencoded = handshake.serialize();
-            stream.write(&handshake_bencoded).unwrap();
+            stream
+                .set_write_timeout(Some(Duration::new(30, 0)))
+                .expect("cannot set write timeout, lol");
+
+            stream
+                .write(&handshake_bencoded)
+                .expect("handshake response error");
             println!("sent handshake");
 
             // let mut data = [0 as u8; 6]; // using 6 byte buffer
-            // match stream.read_exact(&mut data) {
-            //     Ok(_) => {
-            //         if &data == msg {
-            //             println!("Reply is ok!");
-            //         } else {
-            //             let text = from_utf8(&data).unwrap();
-            //             println!("Unexpected reply: {}", text);
-            //         }
-            //     }
-            //     Err(e) => {
-            //         println!("Failed to receive data: {}", e);
-            //     }
-            // }
+            let mut data: Vec<u8> = Default::default();
+            match stream.read_to_end(&mut data) {
+                Ok(_) => {
+                    println!("handshake_response raw: {:?}", data);
+                    let handshake_response = handshake::read_handshake(data);
+                    println!("handshake_response struct: {:?}", handshake_response);
+                }
+                Err(e) => {
+                    println!("Failed to receive data: {}", e);
+                }
+            }
         }
         Err(e) => {
             println!("Failed to connect: {}", e);
