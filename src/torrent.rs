@@ -1,10 +1,3 @@
-extern crate serde;
-extern crate serde_bencode;
-extern crate serde_bytes;
-extern crate serde_derive;
-extern crate sha1;
-extern crate url;
-
 use serde_bencode::ser;
 use serde_bytes::ByteBuf;
 use sha1::{Digest, Sha1};
