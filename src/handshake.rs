@@ -5,16 +5,16 @@ pub struct Handshake {
     peer_id: [u8; 20],
 }
 
-// pub fn new_handshake(info_hash: [u8; 20], peer_id: [u8; 20]) -> Handshake {
-//     Handshake {
-//         pstr: "BitTorrent protocol",
-//         info_hash,
-//         peer_id,
-//     }
-// }
+pub fn new_handshake(info_hash: [u8; 20], peer_id: [u8; 20]) -> Handshake {
+    Handshake {
+        pstr: "BitTorrent protocol".to_owned(),
+        info_hash,
+        peer_id,
+    }
+}
 
 impl Handshake {
-    fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(&self) -> Vec<u8> {
         let mut buffer: Vec<u8> = Vec::new();
 
         // length of protocol identifier
