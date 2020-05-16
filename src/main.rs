@@ -74,8 +74,15 @@ fn main() {
         Ok(mut stream) => {
             println!("Successfully connected to peer");
 
-            // let msg = b"Hello!";
-            // let handshake = handshake::new_handshake(torrent.info_hash, &PEER_ID);
+            fn conv_to_20(slice: &[u8]) -> &[u8; 20] {
+                slice
+                    .try_into()
+                    .expect("could not fit peer id into 20 bytes")
+            }
+
+            let peer_id_transformed: &[u8] = crate::PEER_ID.as_bytes();
+            let handshake =
+                handshake::new_handshake(our_torrent.info_hash, *conv_to_20(peer_id_transformed));
 
             // stream.write(msg).unwrap();
             // println!("Sent Hello, awaiting reply...");
