@@ -88,10 +88,6 @@ fn main() {
             println!("crate::PEER_ID.as_bytes(): {:?}", crate::PEER_ID.as_bytes());
             let peer_id_transformed: &[u8] = crate::PEER_ID.as_bytes();
             println!("peer_id_transformed: {:?}", peer_id_transformed);
-            println!(
-                "*conv_to_20(peer_id_transformed): {:?}",
-                *conv_to_20(peer_id_transformed)
-            );
             let handshake =
                 handshake::new_handshake(our_torrent.info_hash, *conv_to_20(peer_id_transformed));
             println!("handshake: {:?}", handshake);
