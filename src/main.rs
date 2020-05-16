@@ -7,14 +7,9 @@ extern crate sha1;
 extern crate url;
 
 use serde_bencode::de;
-use serde_bencode::ser;
-use serde_bytes::ByteBuf;
-use sha1::{Digest, Sha1};
-use std::io::{self, Read, Write};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
-use std::str::from_utf8;
+use std::io::{self, Read};
+use std::net::{SocketAddr, TcpStream};
 use std::time::Duration;
-use url::{form_urlencoded, ParseError};
 
 mod handshake;
 mod torrent;

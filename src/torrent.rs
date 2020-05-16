@@ -5,14 +5,10 @@ extern crate serde_derive;
 extern crate sha1;
 extern crate url;
 
-use serde_bencode::de;
 use serde_bencode::ser;
 use serde_bytes::ByteBuf;
 use sha1::{Digest, Sha1};
-use std::io::{self, Read, Write};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
-use std::str::from_utf8;
-use std::time::Duration;
+use std::net::{IpAddr, Ipv4Addr};
 use url::{form_urlencoded, ParseError};
 
 #[derive(Debug, Serialize, Deserialize)]
