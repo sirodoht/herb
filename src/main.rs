@@ -7,10 +7,11 @@ extern crate serde_derive;
 // extern crate url;
 
 use serde_bencode::de;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
-use std::time::Duration;
+use std::{convert::TryInto, time::Duration};
 
+mod handshake;
 mod torrent;
 
 pub static PEER_ID: &str = "-TR2940-k8hj0wgej6c1";
@@ -84,8 +85,9 @@ fn main() {
             let handshake =
                 handshake::new_handshake(our_torrent.info_hash, *conv_to_20(peer_id_transformed));
 
-            // stream.write(msg).unwrap();
-            // println!("Sent Hello, awaiting reply...");
+            let handshake_bencoded = handshake.serialize();
+            stream.write(&handshake_bencoded).unwrap();
+            println!("sent handshake");
 
             // let mut data = [0 as u8; 6]; // using 6 byte buffer
             // match stream.read_exact(&mut data) {
