@@ -111,7 +111,7 @@ fn main() {
             match stream.read_to_end(&mut data) {
                 Ok(_) => {
                     println!("handshake_response raw: {:?}", data);
-                    let handshake_response = handshake::read_handshake(data);
+                    let handshake_response = handshake::read_handshake(&data);
                     println!("handshake_response struct: {:?}", handshake_response);
                 }
                 Err(e) => {

@@ -46,37 +46,85 @@ impl Handshake {
     }
 }
 
-pub fn read_handshake(data: Vec<u8>) -> Handshake {
+pub fn read_handshake(data: &Vec<u8>) -> Handshake {
     println!("peer handshake response");
     println!("{:?}", data);
 
     println!();
-    println!("handshake response length (hopefully 68): {}", data.len());
+    println!("handshake response length: {}", data.len());
 
     let pstr_length = data[0];
     println!("pst length is {}", pstr_length);
-    let length_in_int = u32::from_str_radix(str::from_utf8(&[pstr_length]).unwrap(), 16).unwrap();
-    println!();
-    println!("pstr length (hopefully 19): {}", length_in_int);
 
-    let mut pstr: [u8; 20] = [0; 20];
-    for (i, item) in (1..20).enumerate() {
-        pstr[i] = item;
+    let mut pstr: [u8; 19] = [0; 19];
+    for i in 0..19 {
+        pstr[i] = data[i + 1]
     }
+    println!("pstr: {:?}", pstr);
+
+    let mut extensions: [u8; 8] = [0; 8];
+    for i in 0..8 {
+        extensions[i] = data[i + 20];
+    }
+    println!("extensions: {:?}", extensions);
 
     let mut info_hash: [u8; 20] = [0; 20];
-    for (i, item) in (29..48).enumerate() {
-        info_hash[i] = item;
+    for i in 0..20 {
+        info_hash[i] = data[i + 28];
     }
+    println!("info_hash: {:?}", info_hash);
 
     let mut peer_id: [u8; 20] = [0; 20];
-    for (i, item) in (49..68).enumerate() {
-        peer_id[i] = item;
+    for i in 0..20 {
+        peer_id[i] = data[i + 48];
     }
+    println!("peer_id: {:?}", peer_id);
 
     Handshake {
         pstr: str::from_utf8(&pstr).unwrap().to_owned(),
         info_hash,
         peer_id,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str;
+
+    use super::read_handshake;
+
+    #[test]
+    fn read_handshake_works() {
+        let handshake_response: Vec<u8> = vec![
+            19, 66, 105, 116, 84, 111, 114, 114, 101, 110, 116, 32, 112, 114, 111, 116, 111, 99,
+            111, 108, 0, 0, 0, 0, 0, 16, 0, 5, 90, 128, 98, 192, 118, 250, 133, 232, 5, 100, 81,
+            192, 217, 170, 4, 52, 154, 226, 121, 9, 45, 84, 82, 50, 57, 52, 48, 45, 98, 102, 52,
+            50, 56, 107, 52, 104, 113, 107, 99, 53, 0, 0, 0, 169, 5, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 240, 0, 0, 0, 1, 1,
+        ];
+
+        let handshake = read_handshake(&handshake_response);
+
+        assert_eq!(handshake.pstr, "BitTorrent protocol");
+        assert_eq!(
+            handshake.info_hash,
+            [
+                90, 128, 98, 192, 118, 250, 133, 232, 5, 100, 81, 192, 217, 170, 4, 52, 154, 226,
+                121, 9
+            ]
+        );
+        assert_eq!(
+            str::from_utf8(&handshake.peer_id).unwrap().to_owned(),
+            "-TR2940-bf428k4hqkc5"
+        );
     }
 }
