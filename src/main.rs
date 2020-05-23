@@ -9,9 +9,12 @@ extern crate serde_derive;
 use serde_bencode::de;
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
+use std::sync::mpsc;
+use std::thread;
 use std::{convert::TryInto, time::Duration};
 
 mod handshake;
+mod p2p;
 mod torrent;
 
 pub static PEER_ID: &str = "-TR2940-k8hj0wgej6c1";
@@ -68,55 +71,28 @@ fn main() {
     println!("{:?}", peers);
     println!();
 
-    // dial peer tcp
-    let addr = SocketAddr::new(peers[0].ip, peers[0].port);
-    println!(
-        "connecting to peer with IP: {}:{}",
-        peers[0].ip, peers[0].port
-    );
-    // start a tcp connection with peers
-    match TcpStream::connect_timeout(&addr, Duration::new(3, 0)) {
-        Ok(mut stream) => {
-            println!("Successfully connected to peer");
+    let (tx, rx) = mpsc::channel();
 
-            fn conv_to_20(slice: &[u8]) -> &[u8; 20] {
-                slice
-                    .try_into()
-                    .expect("could not fit peer id into 20 bytes")
-            }
-
-            println!("crate::PEER_ID.as_bytes(): {:?}", crate::PEER_ID.as_bytes());
-            let peer_id_transformed: &[u8] = crate::PEER_ID.as_bytes();
-            println!("peer_id_transformed: {:?}", peer_id_transformed);
-            let handshake =
-                handshake::new_handshake(our_torrent.info_hash, *conv_to_20(peer_id_transformed));
-            println!("handshake: {:?}", handshake);
-
-            let handshake_serialized = handshake.serialize();
-            println!("handshake_serialized: {:?}", handshake_serialized);
-            stream
-                .set_write_timeout(Some(Duration::new(5, 0)))
-                .expect("cannot set write timeout, lol");
-
-            stream
-                .write(&handshake_serialized)
-                .expect("handshake response error");
-            println!("sent handshake");
-
-            let mut data: Vec<u8> = Default::default();
-            match stream.read_to_end(&mut data) {
-                Ok(_) => {
-                    println!("handshake_response raw: {:?}", data);
-                    let handshake_response = handshake::read_handshake(&data);
-                    println!("handshake_response struct: {:?}", handshake_response);
-                }
-                Err(e) => {
-                    println!("Failed to receive data: {}", e);
-                }
-            }
+    let mut counter: usize = 0;
+    for p in peers {
+        counter += 1;
+        if counter > 3 {
+            continue;
         }
-        Err(e) => {
-            println!("Failed to connect: {}", e);
-        }
+        let tx_p = mpsc::Sender::clone(&tx);
+        let info_hash = our_torrent.info_hash;
+        thread::spawn(move || {
+            // dial peer tcp
+            let addr = SocketAddr::new(p.ip, p.port);
+            println!("connecting to peer with IP: {}:{}", p.ip, p.port);
+            p2p::start_download_worker(addr, &info_hash);
+
+            let val = String::from(format!("hi from {}", counter));
+            tx_p.send(val).unwrap();
+        });
+    }
+
+    for received in rx {
+        println!("Got: {}", received);
     }
 }
