@@ -13,6 +13,20 @@ You need a torrent file, like [this one](https://cdimage.debian.org/debian-cd/cu
 cargo run < debian-10.3.0-amd64-netinst.iso.torrent
 ```
 
+## Implementation
+
+* [x] read torrent files
+* [x] connect to tracker
+* [x] read bencoded tracker responses
+* [x] start concurrent TCP connections with peers
+* [ ] handshake peers
+* [ ] communicate bitfield
+* [ ] seeding
+* [ ] non-HTTP trackers
+* [ ] multi-file torrents
+* [ ] magnet links
+* [ ] distributed peer discovery
+
 ## License
 
 MIT
