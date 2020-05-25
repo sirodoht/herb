@@ -13,7 +13,7 @@ mod handshake;
 mod p2p;
 mod torrent;
 
-pub static PEER_ID: &str = "-TR2940-k8hj0wgej6c1";
+pub static PEER_ID: &str = "kjh29409k8hj0wgej6c1";
 
 fn main() {
     let stdin = io::stdin();
@@ -73,7 +73,7 @@ fn main() {
     let mut counter: usize = 0;
     for p in peers {
         counter += 1;
-        if counter > 1 {
+        if counter > 3 {
             continue;
         }
         let tx_p = mpsc::Sender::clone(&tx);
@@ -86,6 +86,7 @@ fn main() {
 
             let val = String::from(format!("end from thread {}", counter));
             tx_p.send(val).unwrap();
+            println!("sent one");
         });
     }
 
