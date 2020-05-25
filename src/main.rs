@@ -68,6 +68,7 @@ fn main() {
 
     // load peers into a vec of Peer structs
     let peers = bencode_tracker_resp.get_peers().unwrap();
+    println!("Numer of peers found: {}", peers.len());
     println!("{:?}", peers);
     println!();
 
@@ -76,7 +77,7 @@ fn main() {
     let mut counter: usize = 0;
     for p in peers {
         counter += 1;
-        if counter > 3 {
+        if counter > 13 {
             continue;
         }
         let tx_p = mpsc::Sender::clone(&tx);
@@ -87,7 +88,7 @@ fn main() {
             println!("connecting to peer with IP: {}:{}", p.ip, p.port);
             p2p::start_download_worker(addr, &info_hash);
 
-            let val = String::from(format!("hi from {}", counter));
+            let val = String::from(format!("end from thread {}", counter));
             tx_p.send(val).unwrap();
         });
     }
