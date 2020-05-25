@@ -73,7 +73,7 @@ fn main() {
     let mut counter: usize = 0;
     for p in peers {
         counter += 1;
-        if counter > 3 {
+        if counter > 1 {
             continue;
         }
         let tx_p = mpsc::Sender::clone(&tx);
