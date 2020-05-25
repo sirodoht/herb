@@ -2,16 +2,12 @@ extern crate serde;
 extern crate serde_bencode;
 #[macro_use]
 extern crate serde_derive;
-// extern crate serde_bytes;
-// extern crate sha1;
-// extern crate url;
 
 use serde_bencode::de;
-use std::io::{self, Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::io::{self, Read};
+use std::net::SocketAddr;
 use std::sync::mpsc;
 use std::thread;
-use std::{convert::TryInto, time::Duration};
 
 mod handshake;
 mod p2p;
@@ -77,7 +73,7 @@ fn main() {
     let mut counter: usize = 0;
     for p in peers {
         counter += 1;
-        if counter > 13 {
+        if counter > 3 {
             continue;
         }
         let tx_p = mpsc::Sender::clone(&tx);
@@ -96,4 +92,6 @@ fn main() {
     for received in rx {
         println!("Got: {}", received);
     }
+
+    println!("exit program");
 }

@@ -1,13 +1,12 @@
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::{convert::TryInto, time::Duration};
 
 use crate::handshake;
-use crate::torrent::Peer;
 
 pub fn start_download_worker(addr: SocketAddr, info_hash: &[u8; 20]) {
     // start a tcp connection with peer
-    match TcpStream::connect_timeout(&addr, Duration::new(3, 0)) {
+    match TcpStream::connect_timeout(&addr, Duration::new(10, 0)) {
         Ok(mut stream) => {
             println!("Successfully connected to peer {}", addr);
 
