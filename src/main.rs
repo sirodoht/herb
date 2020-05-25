@@ -90,7 +90,7 @@ fn main() {
         });
     }
 
-    for received in rx {
+    for received in rx.recv() {
         println!("Got: {}", received);
     }
 
