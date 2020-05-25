@@ -9,7 +9,7 @@ pub fn start_download_worker(addr: SocketAddr, info_hash: &[u8; 20]) {
     // start a tcp connection with peer
     match TcpStream::connect_timeout(&addr, Duration::new(3, 0)) {
         Ok(mut stream) => {
-            println!("Successfully connected to peer");
+            println!("Successfully connected to peer {}", addr);
 
             fn conv_to_20(slice: &[u8]) -> &[u8; 20] {
                 slice
@@ -17,16 +17,13 @@ pub fn start_download_worker(addr: SocketAddr, info_hash: &[u8; 20]) {
                     .expect("could not fit peer id into 20 bytes")
             }
 
-            println!("crate::PEER_ID.as_bytes(): {:?}", crate::PEER_ID.as_bytes());
             let peer_id_transformed: &[u8] = crate::PEER_ID.as_bytes();
-            println!("peer_id_transformed: {:?}", peer_id_transformed);
             let handshake = handshake::new_handshake(*info_hash, *conv_to_20(peer_id_transformed));
             println!("handshake: {:?}", handshake);
 
             let handshake_serialized = handshake.serialize();
-            println!("handshake_serialized: {:?}", handshake_serialized);
             stream
-                .set_write_timeout(Some(Duration::new(5, 0)))
+                .set_write_timeout(Some(Duration::new(10, 0)))
                 .expect("cannot set write timeout, lol");
 
             stream
@@ -34,12 +31,21 @@ pub fn start_download_worker(addr: SocketAddr, info_hash: &[u8; 20]) {
                 .expect("handshake response error");
             println!("sent handshake");
 
-            let mut data: Vec<u8> = Default::default();
-            match stream.read_to_end(&mut data) {
+            stream
+                .set_read_timeout(Some(Duration::new(10, 0)))
+                .expect("could not set read timeout :(");
+
+            println!("start reading from peer {}", addr);
+            let mut data: Vec<u8> = Vec::new();
+            match stream.read(&mut data) {
                 Ok(_) => {
                     println!("handshake_response raw: {:?}", data);
-                    let handshake_response = handshake::read_handshake(&data);
-                    println!("handshake_response struct: {:?}", handshake_response);
+                    if data.len() != 0 {
+                        let handshake_response = handshake::read_handshake(&data);
+                        println!("handshake_response struct: {:?}", handshake_response);
+                    } else {
+                        println!("handshake_response equals 0");
+                    }
                 }
                 Err(e) => {
                     println!("Failed to receive data: {}", e);
