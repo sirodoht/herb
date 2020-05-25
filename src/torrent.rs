@@ -4,6 +4,8 @@ use sha1::{Digest, Sha1};
 use std::net::{IpAddr, Ipv4Addr};
 use url::{form_urlencoded, ParseError};
 
+use crate::p2p;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Node(String, i64);
 
@@ -77,12 +79,6 @@ pub struct Torrent {
     pub piece_hashes: Vec<[u8; 20]>,
 }
 
-#[derive(Debug)]
-pub struct Peer {
-    pub ip: IpAddr,
-    pub port: u16,
-}
-
 #[derive(Debug, Clone)]
 pub enum InvalidTorrentError {
     WrongNumberOfPieces,
@@ -94,8 +90,8 @@ pub enum TrackerError {
 }
 
 impl BencodeTrackerResp {
-    pub fn get_peers(&self) -> Result<Vec<Peer>, TrackerError> {
-        let mut final_peers: Vec<Peer> = vec![];
+    pub fn get_peers(&self) -> Result<Vec<p2p::Peer>, TrackerError> {
+        let mut final_peers: Vec<p2p::Peer> = vec![];
 
         let peer_size = 6; // 4 for IP, 2 for port
         let num_peers = self.peers.len() / peer_size;
@@ -110,7 +106,7 @@ impl BencodeTrackerResp {
             let port_arr: [u8; 2] = [self.peers[offset + 4], self.peers[offset + 5]];
             let port = u16::from_be_bytes(port_arr);
 
-            let newpeer = Peer {
+            let newpeer = p2p::Peer {
                 ip: IpAddr::V4(Ipv4Addr::new(
                     ip_slice[0],
                     ip_slice[1],
@@ -168,7 +164,7 @@ impl Torrent {
             form_urlencoded::byte_serialize(&self.info_hash).collect();
 
         let peer_id_urlencoded: String =
-            form_urlencoded::byte_serialize(crate::PEER_ID.as_bytes()).collect();
+            form_urlencoded::byte_serialize(p2p::PEER_ID_STRING.as_bytes()).collect();
 
         let querystring = format!(
             "?info_hash={info_hash}&peer_id={peer_id}&port={port}&uploaded={uploaded}&downloaded={downloaded}&compact={compact}&left={left}",
