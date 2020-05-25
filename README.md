@@ -19,8 +19,9 @@ cargo run < debian-10.3.0-amd64-netinst.iso.torrent
 * [x] connect to tracker
 * [x] read bencoded tracker responses
 * [x] start concurrent TCP connections with peers
-* [ ] handshake peers
+* [x] handshake peers
 * [ ] communicate bitfield
+* [ ] communicate messages
 * [ ] seeding
 * [ ] non-HTTP trackers
 * [ ] multi-file torrents
