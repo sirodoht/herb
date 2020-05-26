@@ -8,6 +8,7 @@ use std::io::{self, Read};
 use std::sync::mpsc;
 use std::thread;
 
+mod bitfield;
 mod client;
 mod handshake;
 mod message;
