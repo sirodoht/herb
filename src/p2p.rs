@@ -1,11 +1,8 @@
-use std::io::{Read, Write};
-use std::net::{IpAddr, Shutdown, SocketAddr, TcpStream};
+use std::convert::TryInto;
+use std::net::IpAddr;
 use std::sync::mpsc::Sender;
-use std::{convert::TryInto, time::Duration};
 
 use crate::client;
-use crate::handshake;
-use crate::torrent::Torrent;
 
 pub static PEER_ID_STRING: &str = "kjh29409k8hj0wgej6c1";
 
