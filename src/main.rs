@@ -10,6 +10,7 @@ use std::thread;
 
 mod client;
 mod handshake;
+mod message;
 mod p2p;
 mod torrent;
 
