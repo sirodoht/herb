@@ -54,7 +54,7 @@ pub fn read_message(data: Vec<u8>) -> Message {
     let msg_id: u8 = data[4];
 
     let mut payload: Vec<u8> = Vec::new();
-    if length > 0 {
+    if length > 1 {
         // means we have a payload
         for index in 5..length + 4 {
             // payload starts after position 5
