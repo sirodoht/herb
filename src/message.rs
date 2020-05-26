@@ -54,11 +54,11 @@ pub fn read_message(data: Vec<u8>) -> Message {
     let msg_id: u8 = data[4];
 
     let mut payload: Vec<u8> = Vec::new();
+    // check if we have a payload
     if length > 1 {
-        // means we have a payload
+        // payload starts after position 5
+        // and length is without counting the 4 first bytes which are the length
         for index in 5..length + 4 {
-            // payload starts after position 5
-            // and length is without counting the 4 first bytes which are the length
             payload.push(data[index]);
         }
     }
@@ -90,6 +90,18 @@ mod tests {
         let msg = super::Message {
             id: super::MSG_CANCEL,
             payload: vec![1, 2, 3],
+        };
+        assert_eq!(de, msg);
+    }
+
+    #[test]
+    fn message_read_no_payload() {
+        let serialized: Vec<u8> = vec![0, 0, 0, 1, 2];
+        let de = super::read_message(serialized);
+
+        let msg = super::Message {
+            id: super::MSG_INTERESTED,
+            payload: vec![],
         };
         assert_eq!(de, msg);
     }
