@@ -2,9 +2,9 @@ use std::str;
 
 #[derive(Debug)]
 pub struct Handshake {
-    pstr: String,
-    info_hash: [u8; 20],
-    peer_id: [u8; 20],
+    pub pstr: String,
+    pub info_hash: [u8; 20],
+    pub peer_id: [u8; 20],
 }
 
 pub fn new_handshake(info_hash: [u8; 20], peer_id: [u8; 20]) -> Handshake {

@@ -15,8 +15,8 @@ pub const MSG_CANCEL: message_id = 8;
 // Message stores ID and payload of a message
 #[derive(Debug, Eq, PartialEq)]
 pub struct Message {
-    id: message_id,
-    payload: Vec<u8>,
+    pub id: message_id,
+    pub payload: Vec<u8>,
 }
 
 impl Message {
