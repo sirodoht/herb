@@ -1,31 +1,31 @@
 #[derive(Debug, Eq, PartialEq)]
 pub struct Bitfield {
-    array: Vec<u8>,
+    pub array: Vec<u8>,
 }
 
 impl Bitfield {
-    pub fn has_piece(&self, index: usize) -> bool {
+    pub fn has_piece(&self, index: i64) -> bool {
         let byte_index = index / 8;
         let offset = index % 8;
-        if byte_index >= self.array.len() {
+        if byte_index >= self.array.len() as i64 {
             return false;
         }
 
         // magic stolen from https://github.com/veggiedefender/torrent-client/blob/a83013d250dd9b4268cceace28e4cd82b07f2cbd/bitfield/bitfield.go
-        return self.array[byte_index] >> (7 - offset) & 1 != 0;
+        return self.array[byte_index as usize] >> (7 - offset) & 1 != 0;
     }
 
-    pub fn set_piece(&mut self, index: usize) {
+    pub fn set_piece(&mut self, index: i64) {
         let byte_index = index / 8;
         let offset = index % 8;
 
         // silently discard invalid bounded index
-        if byte_index >= self.array.len() {
+        if byte_index >= self.array.len() as i64 {
             return;
         }
 
         // magic stolen from https://github.com/veggiedefender/torrent-client/blob/a83013d250dd9b4268cceace28e4cd82b07f2cbd/bitfield/bitfield.go
-        self.array[byte_index] |= 1 << (7 - offset)
+        self.array[byte_index as usize] |= 1 << (7 - offset)
     }
 }
 
@@ -43,7 +43,7 @@ mod tests {
             true, false, false, false, false, false, false,
         ];
         for index in 0..outputs.len() {
-            assert_eq!(outputs[index], bf.has_piece(index));
+            assert_eq!(outputs[index], bf.has_piece(index as i64));
         }
     }
 
