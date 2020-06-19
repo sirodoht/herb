@@ -5,8 +5,9 @@ extern crate serde_derive;
 
 use serde_bencode::de;
 use std::io::{self, Read};
-use std::sync::mpsc;
-use std::thread;
+use std::{thread, time};
+
+// use crossbeam::channel::unbounded;
 
 mod bitfield;
 mod client;
@@ -70,26 +71,57 @@ fn main() {
     // println!("{:?}", peers);
     println!();
 
-    let (tx, rx) = mpsc::channel();
-
-    let mut counter: usize = 0;
-    for p in peers {
-        counter += 1;
-        // if counter > 10 {
-        //     continue;
-        // }
-        let tx_p = mpsc::Sender::clone(&tx);
-        let info_hash = our_torrent.info_hash;
-        thread::spawn(move || {
-            // dial peer tcp
-            // println!("connecting to peer with IP: {}", p.ip);
-            p2p::start_download_worker(p, &info_hash, tx_p);
-            println!("after starting thread: {}", counter);
-        });
+    let (work_snd, work_rcv) = crossbeam::unbounded();
+    for (index, piece_hash) in our_torrent.piece_hashes.iter().enumerate() {
+        let length = our_torrent.calculate_piece_size(index as i64);
+        let piece_work = p2p::PieceWork {
+            index: index as i64,
+            hash: *piece_hash,
+            length,
+        };
+        work_snd.send(piece_work);
     }
 
-    for received in rx {
-        println!("Got from channel: {}", received);
+    let (result_snd, result_rcv) = crossbeam::unbounded();
+
+    for p in peers {
+        let (work_snd_peer, work_rcv_peer) = (work_snd.clone(), work_rcv.clone());
+        let (result_snd_peer, result_rcv_peer) = (result_snd.clone(), result_rcv.clone());
+        let info_hash = our_torrent.info_hash;
+        crossbeam::scope(|s| {
+            s.spawn(|_| {
+                // dial peer tcp
+                // println!("connecting to peer with IP: {}", p.ip);
+                p2p::start_download_worker(
+                    p,
+                    &info_hash,
+                    work_snd_peer,
+                    work_rcv_peer,
+                    result_snd_peer,
+                    result_rcv_peer,
+                );
+                // println!("after starting thread: {}", counter);
+            });
+        })
+        .unwrap();
+    }
+
+    // Collect results into a buffer until full
+    let mut buf = vec![0u8; our_torrent.length as usize];
+    let mut done_pieces = 0;
+    while done_pieces < our_torrent.piece_hashes.len() {
+        let res = result_rcv.recv().unwrap();
+        let (begin, end) = our_torrent.calculate_bounds_for_piece(res.index);
+
+        // copy data from res.buf to buf[begin:end]
+        let mut cache = begin as usize;
+        for item in res.buf {
+            buf[cache] = item;
+            cache += 1;
+        }
+
+        done_pieces += 1;
+        println!("Downloaded piece {}", done_pieces);
     }
 
     println!("exit program");
