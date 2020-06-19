@@ -189,6 +189,20 @@ impl Torrent {
         println!("piece_length: {}", self.piece_length);
         // println!("piece_hashes: {:?}", self.piece_hashes);
     }
+
+    pub fn calculate_bounds_for_piece(&self, index: i64) -> (i64, i64) {
+        let begin: i64 = index * self.piece_length;
+        let mut end: i64 = begin + self.piece_length;
+        if end > self.length {
+            end = self.length;
+        }
+        return (begin, end);
+    }
+
+    pub fn calculate_piece_size(&self, index: i64) -> i64 {
+        let (begin, end) = self.calculate_bounds_for_piece(index);
+        return end - begin;
+    }
 }
 
 pub fn new_torrent(bencode_torrent: &BencodeTorrent) -> Torrent {
