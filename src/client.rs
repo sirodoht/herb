@@ -109,6 +109,49 @@ fn receive_bitfield(stream: &mut TcpStream) -> Result<bitfield::Bitfield, Client
 }
 
 impl Client {
+    pub fn read(&mut self) -> Option<message::Message> {
+        let mut msg_length = vec![0u8; 4];
+        match self.conn.read_exact(&mut msg_length) {
+            Ok(_) => {
+                // check if keep-alive message
+                let msg_length_arr = [msg_length[0], msg_length[1], msg_length[2], msg_length[3]];
+                let msg_length_u32 = u32::from_be_bytes(msg_length_arr);
+                if msg_length_u32 == 0 {
+                    return None;
+                }
+
+                let mut msg_data = vec![0u8; msg_length_u32 as usize];
+                match self.conn.read_exact(&mut msg_data) {
+                    Ok(_) => {
+                        let mut msg_data_full: Vec<u8> = vec![0u8; 4 + msg_length_u32 as usize];
+
+                        // copy length's 4 bytes into msg_data_full
+                        for (index, item) in msg_length.iter().enumerate() {
+                            msg_data_full[index] = *item;
+                        }
+
+                        // copy data bytes into msg_data_full, after length's bytes
+                        for (index, item) in msg_data.iter().enumerate() {
+                            msg_data_full[4 + index] = *item;
+                        }
+
+                        // return msg into message struct
+                        let msg_struct = message::read_message(msg_data_full);
+                        Some(msg_struct)
+                    }
+                    Err(e) => {
+                        println!("Unable to read message content: {}", e);
+                        None
+                    }
+                }
+            }
+            Err(e) => {
+                println!("Unable to read message length: {}", e);
+                None
+            }
+        }
+    }
+
     pub fn send_unchoke(&mut self) {
         let msg = message::Message {
             id: message::MSG_UNCHOKE,
