@@ -13,15 +13,17 @@ You need a torrent file, like [this one](https://cdimage.debian.org/debian-cd/cu
 cargo run < debian-10.4.0-amd64-netinst.iso.torrent
 ```
 
-## Implementation
+## Implementation progress
 
 * [x] read torrent files
 * [x] connect to tracker
-* [x] read bencoded tracker responses
-* [x] start concurrent TCP connections with peers
+* [x] communicate bencoded messages with tracker
+* [x] concurrent TCP connections with peers
 * [x] handshake peers
-* [ ] communicate bitfield
-* [ ] communicate messages
+* [x] bitfields
+* [x] messages
+* [ ] mpmc message passing between peer connection processes
+* [ ] saving to disk
 * [ ] seeding
 * [ ] non-HTTP trackers
 * [ ] multi-file torrents
