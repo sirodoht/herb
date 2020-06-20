@@ -24,6 +24,15 @@ pub struct PieceResult {
     pub buf: Vec<u8>,
 }
 
+pub struct PieceProgress {
+    pub index: i64,
+    pub client: client::Client,
+    pub buf: Vec<u8>,
+    pub downloaded: i64,
+    pub requested: i64,
+    pub backlog: i64,
+}
+
 pub fn start_download_worker(
     p: Peer,
     info_hash: &[u8; 20],
