@@ -1,3 +1,4 @@
+use std::convert::{TryFrom, TryInto};
 use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::time::Duration;
@@ -11,6 +12,7 @@ use crate::p2p;
 pub enum ClientError {
     ConnectionFailure,
     WrongType,
+    PayloadFailure,
 }
 
 // Client is a TCP connection with a peer
@@ -77,7 +79,7 @@ pub fn new(p: p2p::Peer, peer_id: [u8; 20], info_hash: [u8; 20]) -> Result<Clien
                 }
                 Err(e) => {
                     // println!("Failed to receive data from: {}, err: {}", addr, e);
-                    stream.shutdown(Shutdown::Both).unwrap();
+                    // stream.shutdown(Shutdown::Both).unwrap();
                     Err(ClientError::ConnectionFailure)
                 }
             }
@@ -90,15 +92,27 @@ pub fn new(p: p2p::Peer, peer_id: [u8; 20], info_hash: [u8; 20]) -> Result<Clien
 }
 
 fn receive_bitfield(stream: &mut TcpStream) -> Result<bitfield::Bitfield, ClientError> {
-    let mut buf: Vec<u8> = vec![0, 0, 0, 0];
-    match stream.read_exact(&mut buf) {
+    let mut length_buf: Vec<u8> = vec![0, 0, 0, 0];
+    match stream.read_exact(&mut length_buf) {
         Ok(_) => {
-            let msg = message::read_message(buf);
-            if msg.id != message::MSG_BITFIELD {
-                println!("Expected bitfield but got type: {}", msg.id);
-                return Err(ClientError::WrongType);
+            let length_u32: u32 =
+                u32::from_be_bytes([length_buf[0], length_buf[1], length_buf[2], length_buf[3]]);
+            let length: usize = length_u32.try_into().unwrap();
+
+            let mut payload = vec![0u8; length];
+            match stream.read_exact(&mut payload) {
+                Ok(_) => {
+                    let msg_id: u8 = payload[0];
+                    if msg_id != message::MSG_BITFIELD {
+                        println!("Expected bitfield but got type: {}", msg_id);
+                        return Err(ClientError::PayloadFailure);
+                    }
+                    Ok(bitfield::Bitfield { array: payload })
+                }
+                Err(e) => {
+                    return Err(ClientError::PayloadFailure);
+                }
             }
-            Ok(bitfield::Bitfield { array: msg.payload })
         }
         Err(e) => {
             println!("Shutting down: error: {}", e);
@@ -152,6 +166,16 @@ impl Client {
         }
     }
 
+    pub fn send_request(&mut self, index: i64, begin: i64, length: i64) {
+        let req = message::format_request(index, begin, length);
+        self.conn.write(&req.serialize()).unwrap();
+    }
+
+    pub fn send_have(&mut self, index: i64) {
+        let req = message::format_have(index);
+        self.conn.write(&req.serialize()).unwrap();
+    }
+
     pub fn send_unchoke(&mut self) {
         let msg = message::Message {
             id: message::MSG_UNCHOKE,
@@ -163,6 +187,14 @@ impl Client {
     pub fn send_interested(&mut self) {
         let msg = message::Message {
             id: message::MSG_INTERESTED,
+            payload: vec![],
+        };
+        self.conn.write(&msg.serialize()).unwrap();
+    }
+
+    pub fn send_not_interested(&mut self) {
+        let msg = message::Message {
+            id: message::MSG_NOT_INTERESTED,
             payload: vec![],
         };
         self.conn.write(&msg.serialize()).unwrap();
