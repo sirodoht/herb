@@ -47,6 +47,103 @@ impl Message {
     }
 }
 
+pub fn parse_piece(index: u32, buf: &mut Vec<u8>, msg: Message) -> u32 {
+    if msg.payload.len() < 8 {
+        panic!("Payload too short. {} < 8", msg.payload.len());
+    }
+
+    let parsed_index = u32::from_be_bytes([
+        msg.payload[0],
+        msg.payload[1],
+        msg.payload[2],
+        msg.payload[3],
+    ]);
+    if parsed_index != index {
+        panic!("Expected index {}, got {}", index, parsed_index);
+    }
+
+    let begin = u32::from_be_bytes([
+        msg.payload[4],
+        msg.payload[5],
+        msg.payload[6],
+        msg.payload[7],
+    ]);
+    if begin as usize >= buf.len() {
+        panic!("Begin offset too high. {} >= {}", begin, buf.len());
+    }
+
+    if begin + msg.payload.len() as u32 - 8 > buf.len() as u32 {
+        panic!(
+            "Data too long [{}] for offset {} with length {}",
+            msg.payload.len() - 8,
+            begin,
+            buf.len()
+        );
+    }
+    for (index, byte) in msg.payload.iter().enumerate() {
+        buf[8 + index] = *byte;
+    }
+    return buf.len() as u32;
+}
+
+pub fn parse_have(msg: Message) -> u32 {
+    if msg.payload.len() != 4 {
+        panic!(
+            "Expected payload length 4, got length {}",
+            msg.payload.len()
+        );
+    }
+    let index = u32::from_be_bytes([
+        msg.payload[0],
+        msg.payload[1],
+        msg.payload[2],
+        msg.payload[3],
+    ]);
+    return index;
+}
+
+pub fn format_have(index: i64) -> Message {
+    let mut payload = vec![0u8; 4];
+
+    let index_be = index.to_be_bytes();
+    assert!(index_be.len() == 4);
+    for byte in index_be.iter() {
+        payload.push(*byte);
+    }
+
+    Message {
+        id: MSG_HAVE,
+        payload,
+    }
+}
+
+pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
+    let mut payload = vec![0u8; 12];
+
+    let index_be = index.to_be_bytes();
+    assert!(index_be.len() == 4);
+    for byte in index_be.iter() {
+        payload.push(*byte);
+    }
+
+    let begin_be = begin.to_be_bytes();
+    assert!(begin_be.len() == 4);
+    for byte in begin_be.iter() {
+        payload.push(*byte);
+    }
+
+    let length_be = length.to_be_bytes();
+    assert!(length_be.len() == 4);
+    for byte in length_be.iter() {
+        payload.push(*byte);
+    }
+
+    Message {
+        id: MSG_REQUEST,
+        payload,
+    }
+}
+
 pub fn read_message(data: Vec<u8>) -> Message {
     let length_u32: u32 = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
     let length: usize = length_u32.try_into().unwrap();
