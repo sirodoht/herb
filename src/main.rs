@@ -79,28 +79,28 @@ fn main() {
             hash: *piece_hash,
             length,
         };
-        work_snd.send(piece_work);
+        work_snd.send(piece_work).unwrap();
     }
 
     let (result_snd, result_rcv) = crossbeam::unbounded();
 
     for p in peers {
         let (work_snd_peer, work_rcv_peer) = (work_snd.clone(), work_rcv.clone());
-        let (result_snd_peer, result_rcv_peer) = (result_snd.clone(), result_rcv.clone());
+        let result_snd_peer = result_snd.clone();
         let info_hash = our_torrent.info_hash;
         crossbeam::scope(|s| {
             s.spawn(|_| {
                 // dial peer tcp
-                // println!("connecting to peer with IP: {}", p.ip);
+                let ip = p.ip.clone();
+                println!("connecting to peer with IP: {}", ip);
                 p2p::start_download_worker(
                     p,
                     &info_hash,
                     work_snd_peer,
                     work_rcv_peer,
                     result_snd_peer,
-                    result_rcv_peer,
                 );
-                // println!("after starting thread: {}", counter);
+                println!("after starting thread: {}", ip);
             });
         })
         .unwrap();
@@ -111,13 +111,16 @@ fn main() {
     let mut done_pieces = 0;
     while done_pieces < our_torrent.piece_hashes.len() {
         let res = result_rcv.recv().unwrap();
-        let (begin, end) = our_torrent.calculate_bounds_for_piece(res.index);
+        let (begin, end) = our_torrent.calculate_bounds_for_piece(res.index as i64);
 
         // copy data from res.buf to buf[begin:end]
-        let mut cache = begin as usize;
+        let mut counter = begin as usize;
         for item in res.buf {
-            buf[cache] = item;
-            cache += 1;
+            if counter >= end as usize {
+                break;
+            }
+            buf[counter] = item;
+            counter += 1;
         }
 
         done_pieces += 1;
