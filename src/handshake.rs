@@ -47,38 +47,38 @@ impl Handshake {
 }
 
 pub fn read_handshake(data: &Vec<u8>) -> Handshake {
-    println!("peer handshake response");
-    println!("{:?}", data);
+    // println!("peer handshake response");
+    // println!("{:?}", data);
 
-    println!();
-    println!("handshake response length: {}", data.len());
+    // println!();
+    // println!("handshake response length: {}", data.len());
 
     let pstr_length = data[0];
-    println!("pst length is {}", pstr_length);
+    // println!("pst length is {}", pstr_length);
 
     let mut pstr: [u8; 19] = [0; 19];
     for i in 0..19 {
         pstr[i] = data[i + 1]
     }
-    println!("pstr: {:?}", pstr);
+    // println!("pstr: {:?}", pstr);
 
     let mut extensions: [u8; 8] = [0; 8];
     for i in 0..8 {
         extensions[i] = data[i + 20];
     }
-    println!("extensions: {:?}", extensions);
+    // println!("extensions: {:?}", extensions);
 
     let mut info_hash: [u8; 20] = [0; 20];
     for i in 0..20 {
         info_hash[i] = data[i + 28];
     }
-    println!("info_hash: {:?}", info_hash);
+    // println!("info_hash: {:?}", info_hash);
 
     let mut peer_id: [u8; 20] = [0; 20];
     for i in 0..20 {
         peer_id[i] = data[i + 48];
     }
-    println!("peer_id: {:?}", peer_id);
+    // println!("peer_id: {:?}", peer_id);
 
     Handshake {
         pstr: str::from_utf8(&pstr).unwrap().to_owned(),
