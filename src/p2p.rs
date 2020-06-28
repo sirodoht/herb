@@ -10,6 +10,12 @@ use crate::p2p;
 
 pub static PEER_ID_STRING: &str = "kjh29409k8hj0wgej6c1";
 
+#[derive(Debug, Clone)]
+pub enum PieceError {
+    DownloadFailure,
+    MessageParsingFailure,
+}
+
 #[derive(Debug)]
 pub struct Peer {
     pub ip: IpAddr,
@@ -38,25 +44,46 @@ pub struct PieceProgress<'a> {
 }
 
 impl PieceProgress<'_> {
-    pub fn read_message(&mut self) {
-        let msg = self.client.read().unwrap();
-
-        if msg.id == message::MSG_UNCHOKE {
-            self.client.choked = false;
-        } else if msg.id == message::MSG_CHOKE {
-            self.client.choked = true;
-        } else if msg.id == message::MSG_HAVE {
-            let index = message::parse_have(msg);
-            self.client.bitfield.set_piece(index as i64);
-        } else if msg.id == message::MSG_PIECE {
-            let n = message::parse_piece(self.index as u32, &mut self.buf, msg);
-            self.downloaded += n as i64;
-            self.backlog -= 1;
+    pub fn read_message(&mut self) -> Option<PieceError> {
+        match self.client.read() {
+            None => Some(PieceError::MessageParsingFailure),
+            Some(msg) => {
+                if msg.id == message::MSG_UNCHOKE {
+                    self.client.choked = false;
+                } else if msg.id == message::MSG_CHOKE {
+                    self.client.choked = true;
+                } else if msg.id == message::MSG_HAVE {
+                    let index = message::parse_have(msg);
+                    self.client.bitfield.set_piece(index as i64);
+                } else if msg.id == message::MSG_PIECE {
+                    let n = message::parse_piece(self.index as u32, &mut self.buf, msg);
+                    self.downloaded += n as i64;
+                    self.backlog -= 1;
+                }
+                None
+            }
         }
     }
 }
 
-pub fn attempt_download_piece(c: &mut client::Client, pw: PieceWork) -> Vec<u8> {
+pub fn check_integrity(pw: &PieceWork, buf: &Vec<u8>) -> bool {
+    let mut hasher = Sha1::new();
+    hasher.input(buf);
+    let sum_hex = hasher.result();
+
+    for (index, item) in sum_hex.as_slice().iter().enumerate() {
+        if pw.hash[index] != *item {
+            return false;
+        }
+    }
+
+    true
+}
+
+pub fn attempt_download_piece(
+    c: &mut client::Client,
+    pw: PieceWork,
+) -> Result<Vec<u8>, PieceError> {
     let mut state = PieceProgress {
         index: pw.index,
         client: c,
@@ -93,24 +120,18 @@ pub fn attempt_download_piece(c: &mut client::Client, pw: PieceWork) -> Vec<u8> 
             }
         }
 
-        state.read_message();
-    }
-
-    return state.buf;
-}
-
-pub fn check_integrity(pw: &PieceWork, buf: &Vec<u8>) -> bool {
-    let mut hasher = Sha1::new();
-    hasher.input(buf);
-    let sum_hex = hasher.result();
-
-    for (index, item) in sum_hex.as_slice().iter().enumerate() {
-        if pw.hash[index] != *item {
-            return false;
+        match state.read_message() {
+            None => {
+                return Ok(state.buf);
+            }
+            Some(error) => {
+                println!("Failed to read new message, error: {:?}", error);
+                return Err(error);
+            }
         }
     }
 
-    true
+    Ok(state.buf)
 }
 
 pub fn start_download_worker(
@@ -126,35 +147,63 @@ pub fn start_download_worker(
     match client::new(p, peer_id, *info_hash) {
         Ok(client) => {
             this_thread_client = client;
-            println!("success in completing handshake and unchoking");
-            // this_thread_client.send_unchoke();
-            // this_thread_client.send_interested();
+            this_thread_client.send_unchoke();
+            this_thread_client.send_interested();
+            // println!(
+            //     "success in completing handshaking/unchoking with IP: {}",
+            //     peer_ip
+            // );
 
-            // for piece in work_rcv.recv() {
-            //     if !this_thread_client.bitfield.has_piece(piece.index) {
-            //         work_snd.send(piece).unwrap();
-            //         continue;
-            //     }
+            println!("{}: ready for pieces of work", peer_ip);
+            for piece in work_rcv.recv() {
+                println!("{}: received new work with index: {}", peer_ip, piece.index);
+                if !this_thread_client.bitfield.has_piece(piece.index) {
+                    work_snd.send(piece).unwrap();
+                    println!("bitfield failure, ip: {}", peer_ip);
+                    continue;
+                }
 
-            //     let buf = attempt_download_piece(&mut this_thread_client, piece);
-            //     // TODO: handle error, in which case put piece back on work queue (with work_snd.send)
+                println!(
+                    "{}: bitfield success, attempt piece: {}",
+                    peer_ip, piece.index
+                );
+                let buf_result = attempt_download_piece(&mut this_thread_client, piece);
+                match buf_result {
+                    Ok(buf) => {
+                        if !check_integrity(&piece, &buf) {
+                            println!("{}: Piece {} failed integrity check", peer_ip, piece.index);
+                            work_snd.send(piece).unwrap();
+                            println!("putting back work, piece: {}", piece.index);
+                            continue;
+                        }
+                        println!(
+                            "{}: Piece {} integrity check success!",
+                            peer_ip, piece.index
+                        );
 
-            //     if !check_integrity(&piece, &buf) {
-            //         println!("Piece {} failed integrity check", piece.index);
-            //         work_snd.send(piece).unwrap();
-            //         continue;
-            //     }
-
-            //     this_thread_client.send_have(piece.index);
-            //     let piece_result = PieceResult {
-            //         index: piece.index,
-            //         buf: buf.clone(),
-            //     };
-            //     result_snd.send(piece_result).unwrap();
-            // }
+                        this_thread_client.send_have(piece.index);
+                        println!("{}: Piece {} send have", peer_ip, piece.index);
+                        let piece_result = PieceResult {
+                            index: piece.index,
+                            buf: buf.clone(),
+                        };
+                        result_snd.send(piece_result).unwrap();
+                        println!("{}: Piece {} send result !", peer_ip, piece.index);
+                    }
+                    Err(e) => {
+                        println!("Exiting, attempt at download failed: {:?}", e);
+                        work_snd.send(piece).unwrap(); // put piece back on the queue
+                        println!("Putting back work, piece: {}", piece.index);
+                        continue;
+                    }
+                }
+                println!("{}: blocking for new work", peer_ip);
+            }
         }
-        Err(_) => {
-            println!("DROP: peer ip: {}", peer_ip);
+        Err(e) => {
+            println!("{}: DROPPED, with error: {:?}", peer_ip, e);
         }
     }
+
+    println!("{}: end", peer_ip);
 }
