@@ -5,6 +5,7 @@ extern crate serde_derive;
 
 use serde_bencode::de;
 use std::io::{self, Read};
+use std::sync::Mutex;
 use std::{thread, time};
 
 // use crossbeam::channel::unbounded;
@@ -82,28 +83,38 @@ fn main() {
         work_snd.send(piece_work).unwrap();
     }
 
-    let (result_snd, result_rcv) = crossbeam::unbounded();
+    let (result_snd, result_rcv) = crossbeam::unbounded::<p2p::PieceResult>();
+
+    let mut counter_started = 0;
+    let mut counter_died = 0;
 
     for p in peers {
         let (work_snd_peer, work_rcv_peer) = (work_snd.clone(), work_rcv.clone());
         let result_snd_peer = result_snd.clone();
         let info_hash = our_torrent.info_hash;
-        crossbeam::scope(|s| {
-            s.spawn(|_| {
-                // dial peer tcp
-                let ip = p.ip.clone();
-                println!("connecting to peer with IP: {}", ip);
-                p2p::start_download_worker(
-                    p,
-                    &info_hash,
-                    work_snd_peer,
-                    work_rcv_peer,
-                    result_snd_peer,
-                );
-                println!("after starting thread: {}", ip);
-            });
-        })
-        .unwrap();
+
+        thread::spawn(move || {
+            let ip = p.ip.clone();
+            println!("main thread: connecting to peer with IP: {}", ip);
+            counter_started += 1;
+            println!(
+                "counters started: {}, died: {}",
+                counter_started, counter_died,
+            );
+            p2p::start_download_worker(
+                p,
+                &info_hash,
+                work_snd_peer,
+                work_rcv_peer,
+                result_snd_peer,
+            );
+            println!("main thread: after starting thread: {}", ip);
+            counter_died += 1;
+            println!(
+                "counters started: {}, died: {}",
+                counter_started, counter_died,
+            );
+        });
     }
 
     // Collect results into a buffer until full
@@ -111,6 +122,7 @@ fn main() {
     let mut done_pieces = 0;
     while done_pieces < our_torrent.piece_hashes.len() {
         let res = result_rcv.recv().unwrap();
+        println!("main thread: received result!");
         let (begin, end) = our_torrent.calculate_bounds_for_piece(res.index as i64);
 
         // copy data from res.buf to buf[begin:end]
