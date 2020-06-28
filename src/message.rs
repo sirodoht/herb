@@ -120,20 +120,26 @@ pub fn format_have(index: i64) -> Message {
 pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
     let mut payload = vec![0u8; 12];
 
-    let index_be = index.to_be_bytes();
-    assert!(index_be.len() == 4);
+    let index_be = (index as u32).to_be_bytes();
+    if index_be.len() != 4 {
+        println!("index_be.len() is {}", index_be.len());
+    }
     for byte in index_be.iter() {
         payload.push(*byte);
     }
 
-    let begin_be = begin.to_be_bytes();
-    assert!(begin_be.len() == 4);
+    let begin_be = (begin as u32).to_be_bytes();
+    if begin_be.len() != 4 {
+        println!("begin_be.len() is {}", begin_be.len());
+    }
     for byte in begin_be.iter() {
         payload.push(*byte);
     }
 
-    let length_be = length.to_be_bytes();
-    assert!(length_be.len() == 4);
+    let length_be = (length as u32).to_be_bytes();
+    if length_be.len() != 4 {
+        println!("length_be.len() is {}", length_be.len());
+    }
     for byte in length_be.iter() {
         payload.push(*byte);
     }
