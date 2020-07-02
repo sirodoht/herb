@@ -22,7 +22,7 @@ cargo run < debian-10.4.0-amd64-netinst.iso.torrent
 * [x] handshake peers
 * [x] bitfields
 * [x] messages
-* [ ] mpmc message passing between peer connection processes
+* [x] mpmc message passing between peer connection processes
 * [ ] saving to disk
 * [ ] seeding
 * [ ] non-HTTP trackers
