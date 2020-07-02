@@ -67,7 +67,17 @@ fn main() {
     }
 
     // load peers into a vec of Peer structs
-    let peers = bencode_tracker_resp.get_peers().unwrap();
+    let all_peers = bencode_tracker_resp.get_peers().unwrap();
+    let mut peers: Vec<p2p::Peer> = Vec::new();
+    for (index, p) in all_peers.iter().enumerate() {
+        // if index > 20 {
+        //     break;
+        // }
+        peers.push(p2p::Peer {
+            ip: p.ip.clone(),
+            port: p.port.clone(),
+        });
+    }
     println!("Numer of peers found: {}", peers.len());
     // println!("{:?}", peers);
     println!();
@@ -85,8 +95,7 @@ fn main() {
 
     let (result_snd, result_rcv) = crossbeam::unbounded::<p2p::PieceResult>();
 
-    let mut counter_started = 0;
-    let mut counter_died = 0;
+    let mut counter = 0;
 
     for p in peers {
         let (work_snd_peer, work_rcv_peer) = (work_snd.clone(), work_rcv.clone());
@@ -96,25 +105,18 @@ fn main() {
         thread::spawn(move || {
             let ip = p.ip.clone();
             println!("main thread: connecting to peer with IP: {}", ip);
-            counter_started += 1;
-            println!(
-                "counters started: {}, died: {}",
-                counter_started, counter_died,
-            );
             p2p::start_download_worker(
                 p,
                 &info_hash,
                 work_snd_peer,
                 work_rcv_peer,
                 result_snd_peer,
+                counter,
             );
-            println!("main thread: after starting thread: {}", ip);
-            counter_died += 1;
-            println!(
-                "counters started: {}, died: {}",
-                counter_started, counter_died,
-            );
+            println!("main thread: after starting thread: {}: #{}", ip, counter);
         });
+
+        counter += 1;
     }
 
     // Collect results into a buffer until full
