@@ -1,5 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::io::{Read, Write};
+use std::net::IpAddr;
 use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::time::Duration;
 
@@ -197,15 +198,18 @@ impl Client {
         None
     }
 
-    pub fn send_unchoke(&mut self) -> Option<ClientError> {
+    pub fn send_unchoke(&mut self, peer_ip: IpAddr, counter: i32) -> Option<ClientError> {
         let msg = message::Message {
             id: message::MSG_UNCHOKE,
             payload: vec![],
         };
         match self.conn.write(&msg.serialize()) {
-            Ok(_) => None,
+            Ok(_) => {
+                println!("{}: #{}: UNCHOKE: success", peer_ip, counter);
+                None
+            }
             Err(e) => {
-                println!("Error on send_have: {}", e);
+                println!("Error on send_unchoke: {}", e);
                 Some(ClientError::MessageFailure)
             }
         };
@@ -220,7 +224,7 @@ impl Client {
         match self.conn.write(&msg.serialize()) {
             Ok(_) => None,
             Err(e) => {
-                println!("Error on send_have: {}", e);
+                println!("Error on send_interested: {}", e);
                 Some(ClientError::MessageFailure)
             }
         };
@@ -235,7 +239,7 @@ impl Client {
         match self.conn.write(&msg.serialize()) {
             Ok(_) => None,
             Err(e) => {
-                println!("Error on send_have: {}", e);
+                println!("Error on send_not_interested: {}", e);
                 Some(ClientError::MessageFailure)
             }
         };
