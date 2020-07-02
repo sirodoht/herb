@@ -67,16 +67,24 @@ impl PieceProgress<'_> {
 }
 
 pub fn check_integrity(pw: &PieceWork, buf: &Vec<u8>) -> bool {
+    // println!("CHECK: buf: {:?}", buf);
     let mut hasher = Sha1::new();
     hasher.input(buf);
     let sum_hex = hasher.result();
 
-    for (index, item) in sum_hex.as_slice().iter().enumerate() {
+    let mut sum_bytes = [0u8; 20];
+    sum_bytes.copy_from_slice(sum_hex.as_slice());
+    println!("CHECK: sum_bytes: {:?}", sum_bytes);
+    println!("CHECK: pw.hash: {:?}", pw.hash);
+
+    for (index, item) in sum_bytes.iter().enumerate() {
         if pw.hash[index] != *item {
+            println!("CHECK: FALSE");
             return false;
         }
     }
 
+    println!("CHECK: TRUE");
     true
 }
 
@@ -99,7 +107,10 @@ pub fn attempt_download_piece(
         .set_read_timeout(Some(Duration::new(30, 0)))
         .unwrap();
 
+    println!("DOWNLOAD: state.downloaded: {}", state.downloaded);
+    println!("DOWNLOAD: pw.length: {}", pw.length);
     while state.downloaded < pw.length {
+        println!("DOWNLOAD: is client chocked?: {}", state.client.choked);
         // If unchoked, send requests until we have enough unfulfilled requests
         if !state.client.choked {
             let max_block_size = 16384;
@@ -112,6 +123,7 @@ pub fn attempt_download_piece(
                     block_size = pw.length - state.requested;
                 }
 
+                // panic!("does this ever run?");
                 state
                     .client
                     .send_request(pw.index, state.requested, block_size);
@@ -140,70 +152,87 @@ pub fn start_download_worker(
     work_snd: Sender<p2p::PieceWork>,
     work_rcv: Receiver<p2p::PieceWork>,
     result_snd: Sender<p2p::PieceResult>,
+    counter: i32,
 ) {
+    println!("i am thread #{}", counter);
     let mut this_thread_client: client::Client;
     let peer_id: [u8; 20] = PEER_ID_STRING.as_bytes().try_into().unwrap();
     let peer_ip = p.ip;
     match client::new(p, peer_id, *info_hash) {
         Ok(client) => {
             this_thread_client = client;
-            this_thread_client.send_unchoke();
+            println!("{}: #{}: just sent unchoke", peer_ip, counter);
+            this_thread_client.send_unchoke(peer_ip, counter);
             this_thread_client.send_interested();
-            // println!(
-            //     "success in completing handshaking/unchoking with IP: {}",
-            //     peer_ip
-            // );
 
-            println!("{}: ready for pieces of work", peer_ip);
+            println!("{}: #{}: ready for pieces of work", peer_ip, counter);
             for piece in work_rcv.recv() {
-                println!("{}: received new work with index: {}", peer_ip, piece.index);
+                println!(
+                    "{}: #{}: received new work with index: {}",
+                    peer_ip, counter, piece.index
+                );
                 if !this_thread_client.bitfield.has_piece(piece.index) {
                     work_snd.send(piece).unwrap();
-                    println!("bitfield failure, ip: {}", peer_ip);
+                    println!("{}: #{}: bitfield failure", peer_ip, counter);
                     continue;
                 }
 
                 println!(
-                    "{}: bitfield success, attempt piece: {}",
-                    peer_ip, piece.index
+                    "{}: #{}: bitfield success, attempt piece: {}",
+                    peer_ip, counter, piece.index
                 );
                 let buf_result = attempt_download_piece(&mut this_thread_client, piece);
                 match buf_result {
                     Ok(buf) => {
                         if !check_integrity(&piece, &buf) {
-                            println!("{}: Piece {} failed integrity check", peer_ip, piece.index);
+                            println!(
+                                "{}: #{}: Piece {} failed integrity check",
+                                peer_ip, counter, piece.index
+                            );
                             work_snd.send(piece).unwrap();
-                            println!("putting back work, piece: {}", piece.index);
+                            println!(
+                                "{}: #{}: putting back work, piece: {}",
+                                peer_ip, counter, piece.index
+                            );
                             continue;
                         }
                         println!(
-                            "{}: Piece {} integrity check success!",
-                            peer_ip, piece.index
+                            "{}: #{}: Piece {} integrity check success!",
+                            peer_ip, counter, piece.index
                         );
 
                         this_thread_client.send_have(piece.index);
-                        println!("{}: Piece {} send have", peer_ip, piece.index);
+                        println!("{}: #{}: Piece {} send have", peer_ip, counter, piece.index);
                         let piece_result = PieceResult {
                             index: piece.index,
                             buf: buf.clone(),
                         };
                         result_snd.send(piece_result).unwrap();
-                        println!("{}: Piece {} send result !", peer_ip, piece.index);
+                        println!(
+                            "{}: #{}: Piece {} send result !",
+                            peer_ip, counter, piece.index
+                        );
                     }
                     Err(e) => {
-                        println!("Exiting, attempt at download failed: {:?}", e);
+                        println!(
+                            "{}: #{}: Exiting, attempt at download failed: {:?}",
+                            peer_ip, counter, e
+                        );
                         work_snd.send(piece).unwrap(); // put piece back on the queue
-                        println!("Putting back work, piece: {}", piece.index);
+                        println!(
+                            "{}: #{}: Putting back work, piece: {}",
+                            peer_ip, counter, piece.index
+                        );
                         continue;
                     }
                 }
-                println!("{}: blocking for new work", peer_ip);
+                println!("{}: #{}: blocking for new work", peer_ip, counter);
             }
         }
         Err(e) => {
-            println!("{}: DROPPED, with error: {:?}", peer_ip, e);
+            println!("{}: #{}: DROPPED, with error: {:?}", peer_ip, counter, e);
         }
     }
 
-    println!("{}: end", peer_ip);
+    println!("{}: #{}: end", peer_ip, counter);
 }
