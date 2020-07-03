@@ -134,7 +134,10 @@ pub fn attempt_download_piece(
                     block_size = pw.length - state.requested;
                 }
 
-                // panic!("does this ever run?");
+                println!(
+                    "{}: DOWNLOAD: send_request for index: {}",
+                    peer_ip, pw.index
+                );
                 state
                     .client
                     .send_request(pw.index, state.requested, block_size);
@@ -187,12 +190,12 @@ pub fn start_download_worker(
                 );
                 if !this_thread_client.bitfield.has_piece(piece.index) {
                     work_snd.send(piece).unwrap();
-                    println!("{}: #{}: bitfield failure", peer_ip, counter);
+                    println!("{}: #{}: bitfield not existent on peer", peer_ip, counter);
                     continue;
                 }
 
                 println!(
-                    "{}: #{}: bitfield success, attempt piece: {}",
+                    "{}: #{}: bitfield success, piece found, attempt piece: {}",
                     peer_ip, counter, piece.index
                 );
                 let buf_result = attempt_download_piece(&mut this_thread_client, piece);
