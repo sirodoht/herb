@@ -103,13 +103,14 @@ pub fn parse_have(msg: Message) -> u32 {
 }
 
 pub fn format_have(index: i64) -> Message {
-    let mut payload = vec![0u8; 4];
+    let mut payload = vec![];
 
     let index_be = index.to_be_bytes();
     assert!(index_be.len() == 4);
     for byte in index_be.iter() {
         payload.push(*byte);
     }
+    assert!(payload.len() == 4);
 
     Message {
         id: MSG_HAVE,
@@ -118,7 +119,7 @@ pub fn format_have(index: i64) -> Message {
 }
 
 pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
-    let mut payload = vec![0u8; 12];
+    let mut payload = vec![];
 
     let index_be = (index as u32).to_be_bytes();
     if index_be.len() != 4 {
@@ -144,6 +145,7 @@ pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
         payload.push(*byte);
     }
 
+    assert!(payload.len() == 12);
     Message {
         id: MSG_REQUEST,
         payload,
