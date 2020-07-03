@@ -134,7 +134,7 @@ pub fn attempt_download_piece(
 
         match state.read_message() {
             None => {
-                return Ok(state.buf);
+                continue;
             }
             Some(error) => {
                 println!("Failed to read new message, error: {:?}", error);
