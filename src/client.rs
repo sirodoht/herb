@@ -67,7 +67,7 @@ pub fn new(p: p2p::Peer, peer_id: [u8; 20], info_hash: [u8; 20]) -> Result<Clien
                         // );
                         match receive_bitfield(&mut stream) {
                             Ok(bitfield) => {
-                                // println!("bitfield: {:?}", bitfield.array);
+                                println!("{}: bitfield: {:?}", addr, bitfield.array);
                                 Ok(Client {
                                     conn: stream,
                                     choked: true,
@@ -114,11 +114,15 @@ fn receive_bitfield(stream: &mut TcpStream) -> Result<bitfield::Bitfield, Client
                         println!("Expected bitfield but got type: {}", msg_id);
                         return Err(ClientError::PayloadFailure);
                     }
-                    Ok(bitfield::Bitfield { array: payload })
+                    if let Some((_, elements)) = payload.split_first() {
+                        Ok(bitfield::Bitfield {
+                            array: elements.to_owned(),
+                        })
+                    } else {
+                        Err(ClientError::BitfieldFailure)
+                    }
                 }
-                Err(e) => {
-                    return Err(ClientError::PayloadFailure);
-                }
+                Err(_) => Err(ClientError::PayloadFailure),
             }
         }
         Err(e) => {
