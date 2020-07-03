@@ -159,7 +159,7 @@ impl Client {
                 let mut msg_data = vec![0u8; msg_length_u32 as usize];
                 match self.conn.read_exact(&mut msg_data) {
                     Ok(_) => {
-                        println!("{}: READ_CLIENT: msg_data: {:?}", self.peer.ip, msg_data);
+                        // println!("{}: READ_CLIENT: msg_data: {:?}", self.peer.ip, msg_data);
 
                         let mut msg_data_full: Vec<u8> = vec![0u8; 4 + msg_length_u32 as usize];
 
@@ -192,6 +192,8 @@ impl Client {
 
     pub fn send_request(&mut self, index: i64, begin: i64, length: i64) -> Option<ClientError> {
         let req = message::format_request(index, begin, length);
+        // println!("SENT_REQUEST: req.payload: {:?}", req.payload);
+        // println!("SENT_REQUEST: req.serialize(): {:?}", req.serialize());
         match self.conn.write(&req.serialize()) {
             Ok(_) => None,
             Err(e) => {
