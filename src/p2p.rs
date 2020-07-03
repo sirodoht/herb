@@ -198,8 +198,7 @@ pub fn start_download_worker(
                     "{}: #{}: bitfield success, piece found, attempt piece: {}",
                     peer_ip, counter, piece.index
                 );
-                let buf_result = attempt_download_piece(&mut this_thread_client, piece);
-                match buf_result {
+                match attempt_download_piece(&mut this_thread_client, piece) {
                     Ok(buf) => {
                         if !check_integrity(&piece, &buf) {
                             println!(
