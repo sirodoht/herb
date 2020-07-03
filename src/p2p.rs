@@ -44,8 +44,8 @@ pub struct PieceProgress<'a> {
 }
 
 impl PieceProgress<'_> {
-    pub fn read_message(&mut self) -> Option<PieceError> {
-        match self.client.read() {
+    pub fn read_message_pp(&mut self) -> Option<PieceError> {
+        match self.client.read_client() {
             None => Some(PieceError::MessageParsingFailure),
             Some(msg) => {
                 if msg.id == message::MSG_UNCHOKE {
@@ -107,10 +107,17 @@ pub fn attempt_download_piece(
         .set_read_timeout(Some(Duration::new(30, 0)))
         .unwrap();
 
-    println!("DOWNLOAD: state.downloaded: {}", state.downloaded);
-    println!("DOWNLOAD: pw.length: {}", pw.length);
+    let peer_ip = state.client.peer.ip.clone();
+    println!(
+        "{}: DOWNLOAD: state.downloaded: {}",
+        peer_ip, state.downloaded
+    );
+    println!("{}: DOWNLOAD: pw.length: {}", peer_ip, pw.length);
     while state.downloaded < pw.length {
-        println!("DOWNLOAD: is client chocked?: {}", state.client.choked);
+        println!(
+            "{}: DOWNLOAD: is client chocked?: {}",
+            peer_ip, state.client.choked
+        );
         // If unchoked, send requests until we have enough unfulfilled requests
         if !state.client.choked {
             let max_block_size = 16384;
@@ -132,12 +139,15 @@ pub fn attempt_download_piece(
             }
         }
 
-        match state.read_message() {
+        match state.read_message_pp() {
             None => {
                 continue;
             }
             Some(error) => {
-                println!("Failed to read new message, error: {:?}", error);
+                println!(
+                    "{}: Failed to read new message, error: {:?}",
+                    peer_ip, error
+                );
                 return Err(error);
             }
         }

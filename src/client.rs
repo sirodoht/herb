@@ -131,20 +131,32 @@ fn receive_bitfield(stream: &mut TcpStream) -> Result<bitfield::Bitfield, Client
 
 impl Client {
     // reads from the client for a message with potential payload
-    pub fn read(&mut self) -> Option<message::Message> {
+    pub fn read_client(&mut self) -> Option<message::Message> {
         let mut msg_length = vec![0u8; 4];
         match self.conn.read_exact(&mut msg_length) {
             Ok(_) => {
+                println!(
+                    "{}: READ_CLIENT: msg_length: {:?}",
+                    self.peer.ip, msg_length
+                );
+
                 // check if keep-alive message
                 let msg_length_arr = [msg_length[0], msg_length[1], msg_length[2], msg_length[3]];
                 let msg_length_u32 = u32::from_be_bytes(msg_length_arr);
+                println!(
+                    "{}: READ_CLIENT: msg_length_u32: {}",
+                    self.peer.ip, msg_length_u32
+                );
                 if msg_length_u32 == 0 {
+                    println!("{}: READ_CLIENT: msg_length_u32 = 0", self.peer.ip);
                     return None;
                 }
 
                 let mut msg_data = vec![0u8; msg_length_u32 as usize];
                 match self.conn.read_exact(&mut msg_data) {
                     Ok(_) => {
+                        println!("{}: READ_CLIENT: msg_data: {:?}", self.peer.ip, msg_data);
+
                         let mut msg_data_full: Vec<u8> = vec![0u8; 4 + msg_length_u32 as usize];
 
                         // copy length's 4 bytes into msg_data_full
@@ -158,17 +170,17 @@ impl Client {
                         }
 
                         // return msg into message struct
-                        let msg_struct = message::read_message(msg_data_full);
+                        let msg_struct = message::new_message(msg_data_full);
                         Some(msg_struct)
                     }
                     Err(e) => {
-                        println!("Unable to read message content: {}", e);
+                        println!("{}: Unable to read message content: {}", self.peer.ip, e);
                         None
                     }
                 }
             }
             Err(e) => {
-                println!("Unable to read message length: {}", e);
+                println!("{}: Unable to read message length: {}", self.peer.ip, e);
                 None
             }
         }
@@ -205,7 +217,7 @@ impl Client {
         };
         match self.conn.write(&msg.serialize()) {
             Ok(_) => {
-                println!("{}: #{}: UNCHOKE: success", peer_ip, counter);
+                println!("{}: #{}: UNCHOKE sent: success", peer_ip, counter);
                 None
             }
             Err(e) => {

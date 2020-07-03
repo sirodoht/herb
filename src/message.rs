@@ -150,7 +150,7 @@ pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
     }
 }
 
-pub fn read_message(data: Vec<u8>) -> Message {
+pub fn new_message(data: Vec<u8>) -> Message {
     let length_u32: u32 = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
     let length: usize = length_u32.try_into().unwrap();
 
@@ -159,12 +159,15 @@ pub fn read_message(data: Vec<u8>) -> Message {
     let mut payload: Vec<u8> = Vec::new();
     // check if we have a payload
     if length > 1 {
-        // payload starts after position 5
-        // and length is without counting the 4 first bytes which are the length
+        // payload starts after 4 items of length and 1 of id = 5
+        // end is length+4 because `length` variable does not count itself (4 items)
         for index in 5..length + 4 {
             payload.push(data[index]);
         }
     }
+
+    println!("NEW_MESSAGE: id: {:?}", msg_id);
+    println!("NEW_MESSAGE: payload: {:?}", payload);
 
     Message {
         id: msg_id,
@@ -188,7 +191,7 @@ mod tests {
     #[test]
     fn message_read_works() {
         let serialized: Vec<u8> = vec![0, 0, 0, 4, 8, 1, 2, 3];
-        let de = super::read_message(serialized);
+        let de = super::new_message(serialized);
 
         let msg = super::Message {
             id: super::MSG_CANCEL,
@@ -200,7 +203,7 @@ mod tests {
     #[test]
     fn message_read_no_payload() {
         let serialized: Vec<u8> = vec![0, 0, 0, 1, 2];
-        let de = super::read_message(serialized);
+        let de = super::new_message(serialized);
 
         let msg = super::Message {
             id: super::MSG_INTERESTED,
