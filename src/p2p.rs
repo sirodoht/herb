@@ -120,9 +120,13 @@ pub fn attempt_download_piece(
         );
         // If unchoked, send requests until we have enough unfulfilled requests
         if !state.client.choked {
+            // the largest number of bytes a request can ask for
             let max_block_size = 16384;
 
-            while state.backlog < max_block_size && state.requested < pw.length {
+            // the number of unfulfilled requests a client can have in its pipeline
+            let max_backlog = 5;
+
+            while state.backlog < max_backlog && state.requested < pw.length {
                 let mut block_size = max_block_size;
 
                 // Last block might be shorter than the typical block
