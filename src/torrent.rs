@@ -140,20 +140,20 @@ impl BencodeInfo {
         }
 
         let mut hash_list: Vec<[u8; 20]> = Vec::new();
-        let mut hash: [u8; 20] = Default::default();
+        let mut hash = [0u8; 20];
         let mut current_index: usize = 0;
         for piece in self.pieces.iter() {
-            // add piece in hash unless hash is full
-            if current_index < 20 {
-                hash[current_index] = *piece;
-                current_index += 1;
-            } else {
-                // if hash full, push hash into hash_list
-                // and consider hash empty (by reverting index to 0)
+            if current_index >= 20 {
                 hash_list.push(hash);
+                hash = [0u8; 20];
                 current_index = 0;
             }
+            hash[current_index] = *piece;
+            current_index += 1;
         }
+        hash_list.push(hash);
+
+        // println!("hash_list: {:?}", hash_list);
         Ok(hash_list)
     }
 }
