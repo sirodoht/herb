@@ -108,7 +108,7 @@ pub fn parse_have(msg: Message) -> u32 {
 pub fn format_have(index: i64) -> Message {
     let mut payload = vec![];
 
-    let index_be = index.to_be_bytes();
+    let index_be = (index as u32).to_be_bytes();
     assert!(index_be.len() == 4);
     for byte in index_be.iter() {
         payload.push(*byte);
