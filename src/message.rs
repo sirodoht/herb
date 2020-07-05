@@ -123,14 +123,6 @@ pub fn format_have(index: i64) -> Message {
 
 pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
     let mut payload = vec![];
-    // println!("payload 0th stage: {:?}", payload);
-
-    // println!("index: {}", index);
-    // println!("index as u32: {}", index as u32);
-    // println!(
-    //     "(index as u32).to_be_bytes(): {:?}",
-    //     (index as u32).to_be_bytes()
-    // );
 
     let index_be = (index as u32).to_be_bytes();
     if index_be.len() != 4 {
@@ -139,8 +131,6 @@ pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
     for byte in index_be.iter() {
         payload.push(*byte);
     }
-
-    // println!("payload after 1st stage: {:?}", payload);
 
     let begin_be = (begin as u32).to_be_bytes();
     if begin_be.len() != 4 {
@@ -158,9 +148,7 @@ pub fn format_request(index: i64, begin: i64, length: i64) -> Message {
         payload.push(*byte);
     }
 
-    // println!("payload after 3rd stage: {:?}", payload);
-    assert!(payload.len() == 12);
-
+    assert_eq!(payload.len(), 12);
     Message {
         id: MSG_REQUEST,
         payload,
@@ -183,7 +171,7 @@ pub fn new_message(data: Vec<u8>) -> Message {
         }
     }
 
-    println!("NEW_MESSAGE: id: {:?}", msg_id);
+    // println!("NEW_MESSAGE: id: {:?}", msg_id);
     // println!("NEW_MESSAGE: payload: {:?}", payload);
 
     Message {

@@ -12,7 +12,6 @@ pub static PEER_ID_STRING: &str = "kjh29409k8hj0wgej6c1";
 
 #[derive(Debug, Clone)]
 pub enum PieceError {
-    DownloadFailure,
     MessageParsingFailure,
 }
 
@@ -108,16 +107,16 @@ pub fn attempt_download_piece(
         .unwrap();
 
     let peer_ip = state.client.peer.ip.clone();
-    println!(
-        "{}: DOWNLOAD: state.downloaded: {}",
-        peer_ip, state.downloaded
-    );
-    println!("{}: DOWNLOAD: pw.length: {}", peer_ip, pw.length);
+    // println!(
+    //     "{}: DOWNLOAD: state.downloaded: {}", peer_ip,
+    //     state.downloaded
+    // );
+    // println!("{}: DOWNLOAD: pw.length: {}", peer_ip, pw.length);
     while state.downloaded < pw.length {
-        println!(
-            "{}: DOWNLOAD: is client chocked?: {}",
-            peer_ip, state.client.choked
-        );
+        // println!(
+        //     "{}: DOWNLOAD: is client chocked?: {}",
+        //     peer_ip, state.client.choked
+        // );
         // If unchoked, send requests until we have enough unfulfilled requests
         if !state.client.choked {
             // the largest number of bytes a request can ask for
@@ -134,10 +133,10 @@ pub fn attempt_download_piece(
                     block_size = pw.length - state.requested;
                 }
 
-                println!(
-                    "{}: DOWNLOAD: send_request for index: {}",
-                    peer_ip, pw.index
-                );
+                // println!(
+                //     "{}: DOWNLOAD: send_request for index: {}",
+                //     peer_ip, pw.index
+                // );
                 state
                     .client
                     .send_request(pw.index, state.requested, block_size);
@@ -146,6 +145,7 @@ pub fn attempt_download_piece(
             }
         }
 
+        // println!("{}: DOWNLOAD: read_message_pp", peer_ip);
         match state.read_message_pp() {
             None => {
                 continue;
@@ -200,6 +200,8 @@ pub fn start_download_worker(
                 );
                 match attempt_download_piece(&mut this_thread_client, piece) {
                     Ok(buf) => {
+                        // println!("buf: {:?}", buf);
+
                         if !check_integrity(&piece, &buf) {
                             println!(
                                 "{}: #{}: Piece {} failed integrity check",

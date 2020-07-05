@@ -139,20 +139,20 @@ impl Client {
         let mut msg_length = vec![0u8; 4];
         match self.conn.read_exact(&mut msg_length) {
             Ok(_) => {
-                println!(
-                    "{}: READ_CLIENT: msg_length: {:?}",
-                    self.peer.ip, msg_length
-                );
+                // println!(
+                //     "{}: READ_CLIENT: msg_length: {:?}",
+                //     self.peer.ip, msg_length
+                // );
 
                 // check if keep-alive message
                 let msg_length_arr = [msg_length[0], msg_length[1], msg_length[2], msg_length[3]];
                 let msg_length_u32 = u32::from_be_bytes(msg_length_arr);
-                println!(
-                    "{}: READ_CLIENT: msg_length_u32: {}",
-                    self.peer.ip, msg_length_u32
-                );
+                // println!(
+                //     "{}: READ_CLIENT: msg_length_u32: {}",
+                //     self.peer.ip, msg_length_u32
+                // );
                 if msg_length_u32 == 0 {
-                    println!("{}: READ_CLIENT: msg_length_u32 = 0", self.peer.ip);
+                    // println!("{}: READ_CLIENT: msg_length_u32 = 0", self.peer.ip);
                     return None;
                 }
 
