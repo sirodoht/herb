@@ -80,10 +80,13 @@ pub fn parse_piece(index: u32, buf: &mut Vec<u8>, msg: Message) -> u32 {
             buf.len()
         );
     }
-    for (index, byte) in msg.payload.iter().enumerate() {
-        buf[8 + index] = *byte;
+    for (index, _) in msg.payload.iter().enumerate() {
+        if index + 8 == msg.payload.len() {
+            break;
+        }
+        buf[begin as usize + index] = msg.payload[index + 8];
     }
-    return buf.len() as u32;
+    return msg.payload.len() as u32 - 8;
 }
 
 pub fn parse_have(msg: Message) -> u32 {
@@ -224,5 +227,24 @@ mod tests {
             payload: vec![],
         };
         assert_eq!(de, msg);
+    }
+
+    #[test]
+    fn parse_piece_works() {
+        let index = 4;
+        let mut buf = vec![0u8; 10];
+        let msg = super::Message {
+            id: super::MSG_PIECE,
+            payload: vec![
+                0x00, 0x00, 0x00, 0x04, // Index
+                0x00, 0x00, 0x00, 0x02, // Begin
+                0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // Block]
+            ],
+        };
+        let expected_buf = vec![0x00, 0x00, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x00];
+        let expected_length = 6;
+        let test_length = super::parse_piece(index, &mut buf, msg);
+        assert_eq!(test_length, expected_length);
+        assert_eq!(buf, expected_buf);
     }
 }
