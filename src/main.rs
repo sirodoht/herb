@@ -4,11 +4,11 @@ extern crate serde_bencode;
 extern crate serde_derive;
 
 use serde_bencode::de;
+use std::fs::File;
+use std::io::prelude::*;
 use std::io::{self, Read};
-use std::sync::Mutex;
-use std::{thread, time};
-
-// use crossbeam::channel::unbounded;
+use std::path::Path;
+use std::thread;
 
 mod bitfield;
 mod client;
@@ -139,6 +139,20 @@ fn main() {
 
         done_pieces += 1;
         println!("Downloaded piece {}", done_pieces);
+    }
+
+    // write buf to file
+    let path = Path::new("downloaded.iso");
+    let display = path.display();
+
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("couldn't create {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    match file.write_all(&buf) {
+        Err(why) => panic!("couldn't write to {}: {}", display, why),
+        Ok(_) => println!("successfully wrote to {}", display),
     }
 
     println!("exit program");
