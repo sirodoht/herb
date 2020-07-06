@@ -183,7 +183,10 @@ pub fn start_download_worker(
             this_thread_client.send_interested();
 
             println!("{}: #{}: ready for pieces of work", peer_ip, counter);
-            for piece in work_rcv.recv() {
+            while work_rcv.len() > 0 {
+                let piece = work_rcv.recv().unwrap();
+                println!("WORK_PIECES left: {}", work_rcv.len());
+
                 println!(
                     "{}: #{}: received new work with index: {}",
                     peer_ip, counter, piece.index
