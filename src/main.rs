@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, Read};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 mod bitfield;
@@ -67,19 +68,12 @@ fn main() {
     }
 
     // load peers into a vec of Peer structs
-    let all_peers = bencode_tracker_resp.get_peers().unwrap();
-    let mut peers: Vec<p2p::Peer> = Vec::new();
-    for (index, p) in all_peers.iter().enumerate() {
-        // if index > 20 {
-        //     break;
-        // }
-        peers.push(p2p::Peer {
-            ip: p.ip.clone(),
-            port: p.port.clone(),
-        });
-    }
-    println!("Numer of peers found: {}", peers.len());
-    // println!("{:?}", peers);
+    let peers = bencode_tracker_resp.get_peers().unwrap();
+    let number_of_peers = Arc::new(Mutex::new(peers.len()));
+    println!(
+        "Number of peers found: {}",
+        *number_of_peers.lock().unwrap()
+    );
     println!();
 
     let (work_snd, work_rcv) = crossbeam::unbounded();
@@ -97,12 +91,16 @@ fn main() {
 
     let mut counter = 0;
 
+    // thread handles
+    let mut handles = vec![];
+
     for p in peers {
         let (work_snd_peer, work_rcv_peer) = (work_snd.clone(), work_rcv.clone());
         let result_snd_peer = result_snd.clone();
         let info_hash = our_torrent.info_hash;
 
-        thread::spawn(move || {
+        let number_of_peers = Arc::clone(&number_of_peers);
+        let handle = thread::spawn(move || {
             let ip = p.ip.clone();
             println!("main thread: connecting to peer with IP: {}", ip);
             p2p::start_download_worker(
@@ -113,9 +111,12 @@ fn main() {
                 result_snd_peer,
                 counter,
             );
-            println!("main thread: after starting thread: {}: #{}", ip, counter);
-        });
+            println!("{}: Peer exited #{}", ip, counter);
 
+            let mut new_n = number_of_peers.lock().unwrap();
+            *new_n -= 1;
+        });
+        handles.push(handle);
         counter += 1;
     }
 
@@ -138,7 +139,15 @@ fn main() {
         }
 
         done_pieces += 1;
-        println!("Downloaded piece {}", done_pieces);
+
+        let percent = done_pieces as f64 / our_torrent.piece_hashes.len() as f64 * 100f64;
+
+        println!(
+            "({}%) Downloaded piece {} from {} peers",
+            percent,
+            res.index,
+            *number_of_peers.lock().unwrap()
+        );
     }
 
     // write buf to file
