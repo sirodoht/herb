@@ -23,7 +23,7 @@ cargo run < debian-10.4.0-amd64-netinst.iso.torrent
 * [x] bitfields
 * [x] messages
 * [x] mpmc message passing between peer connection processes
-* [ ] saving to disk
+* [x] saving to disk
 * [ ] seeding
 * [ ] non-HTTP trackers
 * [ ] multi-file torrents
