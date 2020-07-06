@@ -143,6 +143,11 @@ fn main() {
         let percent = done_pieces as f64 / our_torrent.piece_hashes.len() as f64 * 100f64;
 
         println!(
+            "Done pieces: {} | Total: {}",
+            done_pieces,
+            our_torrent.piece_hashes.len()
+        );
+        println!(
             "({}%) Downloaded piece {} from {} peers",
             percent,
             res.index,
