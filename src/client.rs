@@ -67,7 +67,7 @@ pub fn new(p: p2p::Peer, peer_id: [u8; 20], info_hash: [u8; 20]) -> Result<Clien
                         // );
                         match receive_bitfield(&mut stream) {
                             Ok(bitfield) => {
-                                println!("{}: bitfield: {:?}", addr, bitfield.array);
+                                // println!("{}: bitfield: {:?}", addr, bitfield.array);
                                 Ok(Client {
                                     conn: stream,
                                     choked: true,
@@ -223,7 +223,7 @@ impl Client {
         };
         match self.conn.write(&msg.serialize()) {
             Ok(_) => {
-                println!("{}: #{}: UNCHOKE sent: success", peer_ip, counter);
+                // println!("{}: #{}: UNCHOKE sent: success", peer_ip, counter);
                 None
             }
             Err(e) => {

@@ -73,8 +73,8 @@ pub fn check_integrity(pw: &PieceWork, buf: &Vec<u8>) -> bool {
 
     let mut sum_bytes = [0u8; 20];
     sum_bytes.copy_from_slice(sum_hex.as_slice());
-    println!("CHECK: sum_bytes: {:?}", sum_bytes);
-    println!("CHECK: pw.hash: {:?}", pw.hash);
+    // println!("CHECK: sum_bytes: {:?}", sum_bytes);
+    // println!("CHECK: pw.hash: {:?}", pw.hash);
 
     for (index, item) in sum_bytes.iter().enumerate() {
         if pw.hash[index] != *item {
@@ -83,7 +83,7 @@ pub fn check_integrity(pw: &PieceWork, buf: &Vec<u8>) -> bool {
         }
     }
 
-    println!("CHECK: TRUE");
+    // println!("CHECK: TRUE");
     true
 }
 
@@ -178,7 +178,7 @@ pub fn start_download_worker(
     match client::new(p, peer_id, *info_hash) {
         Ok(client) => {
             this_thread_client = client;
-            println!("{}: #{}: just sent unchoke", peer_ip, counter);
+            // println!("{}: #{}: just sent unchoke", peer_ip, counter);
             this_thread_client.send_unchoke(peer_ip, counter);
             this_thread_client.send_interested();
 
@@ -214,13 +214,13 @@ pub fn start_download_worker(
                             );
                             continue;
                         }
-                        println!(
-                            "{}: #{}: Piece {} integrity check success!",
-                            peer_ip, counter, piece.index
-                        );
+                        // println!(
+                        //     "{}: #{}: Piece {} integrity check success!",
+                        //     peer_ip, counter, piece.index
+                        // );
 
                         this_thread_client.send_have(piece.index);
-                        println!("{}: #{}: Piece {} send have", peer_ip, counter, piece.index);
+                        // println!("{}: #{}: Piece {} send have", peer_ip, counter, piece.index);
                         let piece_result = PieceResult {
                             index: piece.index,
                             buf: buf.clone(),
