@@ -1,6 +1,5 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::io::{Read, Write};
-use std::net::IpAddr;
 use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::time::Duration;
 
@@ -28,17 +27,15 @@ pub struct Client {
 }
 
 pub fn new(p: p2p::Peer, peer_id: [u8; 20], info_hash: [u8; 20]) -> Result<Client, ClientError> {
-    // println!("Connecting to peer {}", p.ip);
+    // println!("connecting to peer {}", p.ip);
     let addr = SocketAddr::new(p.ip, p.port);
     match TcpStream::connect_timeout(&addr, Duration::new(5, 0)) {
         Ok(mut stream) => {
-            // println!("Successfully connected to peer {}", addr);
+            // println!("successfully connected to peer {}", addr);
             let handshake = handshake::new_handshake(info_hash, peer_id);
             // println!("handshake: {:?}", handshake);
 
             let handshake_serialized = handshake.serialize();
-            // println!("handshake serialized:");
-            // println!("{:?}", handshake_serialized);
 
             stream
                 .set_write_timeout(Some(Duration::new(5, 0)))
@@ -57,42 +54,33 @@ pub fn new(p: p2p::Peer, peer_id: [u8; 20], info_hash: [u8; 20]) -> Result<Clien
             let mut data: Vec<u8> = vec![0u8; 68];
             match stream.read_exact(&mut data) {
                 Ok(_) => {
-                    // println!("handshake_response raw from: {}, data: {:?}", addr, data);
                     let handshake_response = handshake::read_handshake(&data);
                     if handshake_response.pstr.len() != 0 {
-                        // println!("handshake_response success, len: {}", data.len());
-                        // println!(
-                        //     "handshake_response struct from: {}, data: {:?}",
-                        //     addr, handshake_response
-                        // );
+                        // println!("handshake response success, len: {}", data.len());
                         match receive_bitfield(&mut stream) {
-                            Ok(bitfield) => {
-                                // println!("{}: bitfield: {:?}", addr, bitfield.array);
-                                Ok(Client {
-                                    conn: stream,
-                                    choked: true,
-                                    peer: p,
-                                    bitfield,
-                                    info_hash,
-                                    peer_id,
-                                })
-                            }
+                            Ok(bitfield) => Ok(Client {
+                                conn: stream,
+                                choked: true,
+                                peer: p,
+                                bitfield,
+                                info_hash,
+                                peer_id,
+                            }),
                             Err(_) => Err(ClientError::BitfieldFailure),
                         }
                     } else {
-                        // println!("handshake_response, failed, equals 0, for: {}", addr);
+                        // println!("handshake response, failed, equals 0, for: {}", addr);
                         Err(ClientError::ConnectionFailure)
                     }
                 }
-                Err(e) => {
-                    // println!("Failed to receive data from: {}, err: {}", addr, e);
-                    // stream.shutdown(Shutdown::Both).unwrap();
+                Err(_) => {
+                    // println!("failed to receive data from: {}, err: {}", addr, e);
                     Err(ClientError::ConnectionFailure)
                 }
             }
         }
-        Err(e) => {
-            // println!("Could not connect to: {}, err: {}", addr, e);
+        Err(_) => {
+            // println!("could not connect to: {}, err: {}", addr, e);
             Err(ClientError::ConnectionFailure)
         }
     }
@@ -126,7 +114,7 @@ fn receive_bitfield(stream: &mut TcpStream) -> Result<bitfield::Bitfield, Client
             }
         }
         Err(e) => {
-            println!("Shutting down: error: {}", e);
+            println!("shutting down: error: {}", e);
             stream.shutdown(Shutdown::Both).unwrap();
             Err(ClientError::ConnectionFailure)
         }
@@ -185,6 +173,7 @@ impl Client {
             }
             Err(e) => {
                 println!("{}: Unable to read message length: {}", self.peer.ip, e);
+                self.conn.shutdown(Shutdown::Both).unwrap();
                 None
             }
         }
@@ -192,8 +181,6 @@ impl Client {
 
     pub fn send_request(&mut self, index: i64, begin: i64, length: i64) -> Option<ClientError> {
         let req = message::format_request(index, begin, length);
-        // println!("SENT_REQUEST: req.payload: {:?}", req.payload);
-        // println!("SENT_REQUEST: req.serialize(): {:?}", req.serialize());
         match self.conn.write(&req.serialize()) {
             Ok(_) => None,
             Err(e) => {
@@ -216,16 +203,13 @@ impl Client {
         None
     }
 
-    pub fn send_unchoke(&mut self, peer_ip: IpAddr, counter: i32) -> Option<ClientError> {
+    pub fn send_unchoke(&mut self) -> Option<ClientError> {
         let msg = message::Message {
             id: message::MSG_UNCHOKE,
             payload: vec![],
         };
         match self.conn.write(&msg.serialize()) {
-            Ok(_) => {
-                // println!("{}: #{}: UNCHOKE sent: success", peer_ip, counter);
-                None
-            }
+            Ok(_) => None,
             Err(e) => {
                 println!("Error on send_unchoke: {}", e);
                 Some(ClientError::MessageFailure)
@@ -243,21 +227,6 @@ impl Client {
             Ok(_) => None,
             Err(e) => {
                 println!("Error on send_interested: {}", e);
-                Some(ClientError::MessageFailure)
-            }
-        };
-        None
-    }
-
-    pub fn send_not_interested(&mut self) -> Option<ClientError> {
-        let msg = message::Message {
-            id: message::MSG_NOT_INTERESTED,
-            payload: vec![],
-        };
-        match self.conn.write(&msg.serialize()) {
-            Ok(_) => None,
-            Err(e) => {
-                println!("Error on send_not_interested: {}", e);
                 Some(ClientError::MessageFailure)
             }
         };
