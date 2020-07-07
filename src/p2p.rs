@@ -244,7 +244,7 @@ pub fn start_download_worker(
                             "{}: #{}: Putting back work, piece: {}",
                             peer_ip, counter, piece.index
                         );
-                        continue;
+                        return;
                     }
                 }
                 println!("{}: #{}: blocking for new work", peer_ip, counter);
