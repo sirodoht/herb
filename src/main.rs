@@ -102,7 +102,7 @@ fn main() {
         let number_of_peers = Arc::clone(&number_of_peers);
         let handle = thread::spawn(move || {
             let ip = p.ip.clone();
-            println!("main thread: connecting to peer with IP: {}", ip);
+            println!("{}: main thread: connecting to peer", ip);
             p2p::start_download_worker(
                 p,
                 &info_hash,
@@ -111,7 +111,7 @@ fn main() {
                 result_snd_peer,
                 counter,
             );
-            println!("{}: Peer exited #{}", ip, counter);
+            println!("{}: main thread: peer exited {}", ip, counter);
 
             let mut new_n = number_of_peers.lock().unwrap();
             *new_n -= 1;
@@ -124,8 +124,10 @@ fn main() {
     let mut buf = vec![0u8; our_torrent.length as usize];
     let mut done_pieces = 0;
     while done_pieces < our_torrent.piece_hashes.len() {
+        // println!("scanning for results");
         let res = result_rcv.recv().unwrap();
-        println!("main thread: received result!");
+
+        // println!("main thread: received result!");
         let (begin, end) = our_torrent.calculate_bounds_for_piece(res.index as i64);
 
         // copy data from res.buf to buf[begin:end]
@@ -143,15 +145,12 @@ fn main() {
         let percent = done_pieces as f32 / our_torrent.piece_hashes.len() as f32 * 100f32;
 
         println!(
-            "Done pieces: {} | Total: {}",
-            done_pieces,
-            our_torrent.piece_hashes.len()
-        );
-        println!(
-            "({}%) Downloaded piece {} from {} peers",
+            "({:.2}%) [{}/{}] Downloaded piece #{} from {} peers",
             percent,
+            done_pieces,
+            our_torrent.piece_hashes.len(),
             res.index,
-            *number_of_peers.lock().unwrap()
+            *number_of_peers.lock().unwrap(),
         );
     }
 

@@ -177,54 +177,51 @@ pub fn start_download_worker(
     result_snd: Sender<p2p::PieceResult>,
     counter: i32,
 ) {
-    println!("i am thread #{}", counter);
+    // println!("I am thread {}", counter);
     let mut this_thread_client: client::Client;
     let peer_id: [u8; 20] = PEER_ID_STRING.as_bytes().try_into().unwrap();
     let peer_ip = p.ip;
     match client::new(p, peer_id, *info_hash) {
         Ok(client) => {
             this_thread_client = client;
-            // println!("{}: #{}: just sent unchoke", peer_ip, counter);
-            this_thread_client.send_unchoke(peer_ip, counter);
+            this_thread_client.send_unchoke();
             this_thread_client.send_interested();
 
-            println!("{}: #{}: ready for pieces of work", peer_ip, counter);
-            while work_rcv.len() > 0 {
+            // println!("{}: #{}: ready for pieces of work", peer_ip, counter);
+            while !work_rcv.is_empty() {
                 let piece = work_rcv.recv().unwrap();
-                println!("WORK_PIECES left: {}", work_rcv.len());
+                println!("{}: #{} received piece for work", peer_ip, piece.index);
+                // println!("WORK_PIECES left: {}", work_rcv.len());
 
-                println!(
-                    "{}: #{}: received new work with index: {}",
-                    peer_ip, counter, piece.index
-                );
                 if !this_thread_client.bitfield.has_piece(piece.index) {
                     work_snd.send(piece).unwrap();
-                    println!("{}: #{}: bitfield not existent on peer", peer_ip, counter);
+                    println!(
+                        "{}: #{}: bitfield not existent on peer",
+                        peer_ip, piece.index
+                    );
                     continue;
                 }
 
-                println!(
-                    "{}: #{}: bitfield success, piece found, attempt piece: {}",
-                    peer_ip, counter, piece.index
-                );
+                // println!(
+                //     "{}: #{}: bitfield success, piece found, attempt piece: {}",
+                //     peer_ip, counter, piece.index
+                // );
                 match attempt_download_piece(&mut this_thread_client, piece) {
                     Ok(buf) => {
-                        // println!("buf: {:?}", buf);
-
                         if !check_integrity(&piece, &buf) {
                             println!(
-                                "{}: #{}: Piece {} failed integrity check",
+                                "{}: #{}: piece #{} failed integrity check",
                                 peer_ip, counter, piece.index
                             );
                             work_snd.send(piece).unwrap();
                             println!(
-                                "{}: #{}: putting back work, piece: {}",
+                                "{}: #{}: putting back work, piece: #{}",
                                 peer_ip, counter, piece.index
                             );
                             continue;
                         }
                         // println!(
-                        //     "{}: #{}: Piece {} integrity check success!",
+                        //     "{}: #{}: piece #{} integrity check success!",
                         //     peer_ip, counter, piece.index
                         // );
 
@@ -235,25 +232,25 @@ pub fn start_download_worker(
                             buf: buf.clone(),
                         };
                         result_snd.send(piece_result).unwrap();
-                        println!(
-                            "{}: #{}: Piece {} send result !",
-                            peer_ip, counter, piece.index
-                        );
+                        // println!(
+                        //     "{}: #{}: piece {} send as result",
+                        //     peer_ip, counter, piece.index
+                        // );
                     }
                     Err(e) => {
                         println!(
-                            "{}: #{}: Exiting, attempt at download failed: {:?}",
-                            peer_ip, counter, e
+                            "{}: {}: attempt of piece #{} at download failed: {:?}",
+                            peer_ip, counter, piece.index, e
                         );
                         work_snd.send(piece).unwrap(); // put piece back on the queue
                         println!(
-                            "{}: #{}: Putting back work, piece: {}",
+                            "{}: {}: putting back work, piece: #{}",
                             peer_ip, counter, piece.index
                         );
                         return;
                     }
                 }
-                println!("{}: #{}: blocking for new work", peer_ip, counter);
+                // println!("{}: #{}: blocking for new work", peer_ip, counter);
             }
         }
         Err(e) => {
