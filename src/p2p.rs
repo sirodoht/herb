@@ -103,7 +103,13 @@ pub fn attempt_download_piece(
     state
         .client
         .conn
-        .set_read_timeout(Some(Duration::new(30, 0)))
+        .set_read_timeout(Some(Duration::new(5, 0)))
+        .unwrap();
+
+    state
+        .client
+        .conn
+        .set_write_timeout(Some(Duration::new(5, 0)))
         .unwrap();
 
     let peer_ip = state.client.peer.ip.clone();
