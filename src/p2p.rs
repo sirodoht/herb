@@ -190,7 +190,7 @@ pub fn start_download_worker(
             // println!("{}: #{}: ready for pieces of work", peer_ip, counter);
             while !work_rcv.is_empty() {
                 let piece = work_rcv.recv().unwrap();
-                println!("{}: #{} received piece for work", peer_ip, piece.index);
+                // println!("{}: #{} received piece for work", peer_ip, piece.index);
                 // println!("WORK_PIECES left: {}", work_rcv.len());
 
                 if !this_thread_client.bitfield.has_piece(piece.index) {
