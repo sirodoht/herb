@@ -1,21 +1,23 @@
 use std::convert::{TryFrom, TryInto};
 
-pub type message_id = u8;
+pub type MessageId = u8;
 
-pub const MSG_CHOKE: message_id = 0;
-pub const MSG_UNCHOKE: message_id = 1;
-pub const MSG_INTERESTED: message_id = 2;
-pub const MSG_NOT_INTERESTED: message_id = 3;
-pub const MSG_HAVE: message_id = 4;
-pub const MSG_BITFIELD: message_id = 5;
-pub const MSG_REQUEST: message_id = 6;
-pub const MSG_PIECE: message_id = 7;
-pub const MSG_CANCEL: message_id = 8;
+pub const MSG_CHOKE: MessageId = 0;
+pub const MSG_UNCHOKE: MessageId = 1;
+pub const MSG_INTERESTED: MessageId = 2;
+#[allow(dead_code)]
+pub const MSG_NOT_INTERESTED: MessageId = 3;
+pub const MSG_HAVE: MessageId = 4;
+pub const MSG_BITFIELD: MessageId = 5;
+pub const MSG_REQUEST: MessageId = 6;
+pub const MSG_PIECE: MessageId = 7;
+#[allow(dead_code)]
+pub const MSG_CANCEL: MessageId = 8;
 
 // Message stores ID and payload of a message
 #[derive(Debug, Eq, PartialEq)]
 pub struct Message {
-    pub id: message_id,
+    pub id: MessageId,
     pub payload: Vec<u8>,
 }
 
