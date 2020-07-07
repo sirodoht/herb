@@ -53,7 +53,7 @@ pub fn read_handshake(data: &Vec<u8>) -> Handshake {
     // println!();
     // println!("handshake response length: {}", data.len());
 
-    let pstr_length = data[0];
+    // let pstr_length = data[0];
     // println!("pst length is {}", pstr_length);
 
     let mut pstr: [u8; 19] = [0; 19];

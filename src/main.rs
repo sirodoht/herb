@@ -140,7 +140,7 @@ fn main() {
 
         done_pieces += 1;
 
-        let percent = done_pieces as f64 / our_torrent.piece_hashes.len() as f64 * 100f64;
+        let percent = done_pieces as f32 / our_torrent.piece_hashes.len() as f32 * 100f32;
 
         println!(
             "Done pieces: {} | Total: {}",
